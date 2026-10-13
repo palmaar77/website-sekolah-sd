@@ -18,6 +18,9 @@ import {
   Bell,
   Star,
   Quote,
+  Smartphone,
+  Image as ImageIcon,
+  MessageCircle,
 } from "lucide-react";
 import { formatDateIndo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -179,8 +182,156 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 2. STATISTIK SEKOLAH SECTION */}
-      <section className="relative -mt-10 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      {/* =========================================================================
+          1. TAMPILAN KHUSUS HANDPHONE (Mobile Only: block md:hidden)
+          Menu Cepat Layanan (App Launcher) & Ringkasan Khusus Layar HP
+         ========================================================================= */}
+      <section className="block md:hidden px-4 -mt-6 relative z-30 mb-6">
+        {/* Launcher Menu Pintasan HP */}
+        <div className="bg-white rounded-3xl p-5 shadow-xl border border-slate-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Smartphone className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 leading-none">
+                  Akses Cepat Layanan
+                </h3>
+                <p className="text-[10px] text-slate-500 mt-0.5">Pintasan praktis untuk orang tua & siswa</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Online 24/7
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <Link
+              href="/ppdb"
+              className="flex flex-col items-center text-center p-2.5 rounded-2xl bg-gradient-to-b from-amber-50 to-amber-100/40 border border-amber-200/60 active:scale-95 transition-transform"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 flex items-center justify-center shadow-md shadow-amber-400/20 mb-1.5">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900 leading-tight">PPDB 2025</span>
+              <span className="text-[10px] text-amber-700 font-semibold mt-0.5">Daftar Baru</span>
+            </Link>
+
+            <Link
+              href="/siswa/login"
+              className="flex flex-col items-center text-center p-2.5 rounded-2xl bg-gradient-to-b from-blue-50 to-blue-100/40 border border-blue-200/60 active:scale-95 transition-transform"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 mb-1.5">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900 leading-tight">Portal Siswa</span>
+              <span className="text-[10px] text-blue-700 font-semibold mt-0.5">Nilai & Info</span>
+            </Link>
+
+            <Link
+              href="/pengumuman"
+              className="flex flex-col items-center text-center p-2.5 rounded-2xl bg-gradient-to-b from-rose-50 to-rose-100/40 border border-rose-200/60 active:scale-95 transition-transform"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-rose-600 text-white flex items-center justify-center shadow-md shadow-rose-500/20 mb-1.5">
+                <Bell className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900 leading-tight">Pengumuman</span>
+              <span className="text-[10px] text-rose-700 font-semibold mt-0.5">Info Terkini</span>
+            </Link>
+
+            <Link
+              href="/galeri"
+              className="flex flex-col items-center text-center p-2.5 rounded-2xl bg-gradient-to-b from-purple-50 to-purple-100/40 border border-purple-200/60 active:scale-95 transition-transform"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/20 mb-1.5">
+                <ImageIcon className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900 leading-tight">Galeri Foto</span>
+              <span className="text-[10px] text-purple-700 font-semibold mt-0.5">Dokumentasi</span>
+            </Link>
+
+            <Link
+              href="/akademik"
+              className="flex flex-col items-center text-center p-2.5 rounded-2xl bg-gradient-to-b from-emerald-50 to-emerald-100/40 border border-emerald-200/60 active:scale-95 transition-transform"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 mb-1.5">
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900 leading-tight">Kurikulum</span>
+              <span className="text-[10px] text-emerald-700 font-semibold mt-0.5">Kalender & P5</span>
+            </Link>
+
+            <Link
+              href="/kontak"
+              className="flex flex-col items-center text-center p-2.5 rounded-2xl bg-gradient-to-b from-sky-50 to-sky-100/40 border border-sky-200/60 active:scale-95 transition-transform"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-sky-500/20 mb-1.5">
+                <Phone className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-bold text-slate-900 leading-tight">Hubungi Kami</span>
+              <span className="text-[10px] text-sky-700 font-semibold mt-0.5">Lokasi & WA</span>
+            </Link>
+          </div>
+
+          {/* Banner Bantuan Cepat WhatsApp Mobile */}
+          <div className="mt-4 p-3 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <MessageCircle className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 leading-tight">Konsultasi PPDB & Bantuan</p>
+                <p className="text-[10px] text-slate-500">Tanyakan langsung pada admin sekolah</p>
+              </div>
+            </div>
+            <Link
+              href="/kontak"
+              className="shrink-0 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all"
+            >
+              Tanya Admin
+            </Link>
+          </div>
+        </div>
+
+        {/* Statistik Ringkas Khusus Handphone */}
+        <div className="mt-4 bg-slate-50 border border-slate-200/80 rounded-3xl p-4">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-xs font-extrabold text-slate-800">Ringkasan Statistik Sekolah</span>
+            <span className="text-[10px] text-blue-700 font-bold bg-blue-100 px-2 py-0.5 rounded-full">
+              Data Resmi
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center text-center">
+              <span className="text-2xl font-black text-blue-600">{studentCount}+</span>
+              <span className="text-xs font-bold text-slate-700 mt-0.5">Siswa Aktif</span>
+              <span className="text-[10px] text-slate-400">Kelas 1 - 6</span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center text-center">
+              <span className="text-2xl font-black text-blue-600">{teacherCount}</span>
+              <span className="text-xs font-bold text-slate-700 mt-0.5">Guru & Tendik</span>
+              <span className="text-[10px] text-slate-400">Tersertifikasi</span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center text-center">
+              <span className="text-2xl font-black text-blue-600">{classroomCount}</span>
+              <span className="text-xs font-bold text-slate-700 mt-0.5">Rombel</span>
+              <span className="text-[10px] text-slate-400">Media Digital</span>
+            </div>
+            <div className="bg-white p-3 rounded-2xl border border-amber-200 shadow-xs flex flex-col items-center text-center">
+              <span className="text-2xl font-black text-amber-500">{accreditation}</span>
+              <span className="text-xs font-bold text-slate-700 mt-0.5">Akreditasi</span>
+              <span className="text-[10px] text-amber-600 font-semibold">Predikat Unggul</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          2. TAMPILAN KHUSUS LAPTOP / DESKTOP (Desktop Only: hidden md:block)
+          Statistik Bar Horizontal Lengkap & Luas
+         ========================================================================= */}
+      <section className="hidden md:block relative -mt-10 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             <div className="flex flex-col items-center text-center p-2">
