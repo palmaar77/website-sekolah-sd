@@ -1,0 +1,334 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  STAFF
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum PPDBStatus {
+  PENDING
+  VERIFYING
+  ACCEPTED
+  REJECTED
+}
+
+enum PPDBPath {
+  ZONASI
+  AFIRMASI
+  PRESTASI
+  PERPINDAHAN_TUGAS
+}
+
+enum Gender {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum DocumentType {
+  AKTA_KELAHIRAN
+  KARTU_KELUARGA
+  PAS_FOTO
+  SURAT_KETERANGAN_LULUS
+  LAINNYA
+}
+
+model AdminUser {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(ADMIN)
+  isActive     Boolean       @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  news         News[]
+  activityLogs ActivityLog[]
+
+  @@map("admin_users")
+}
+
+model SchoolProfile {
+  id                   String   @id @default("default-profile")
+  schoolName           String
+  npsn                 String
+  accreditation        String
+  address              String
+  city                 String
+  province             String
+  postalCode           String?
+  phone                String
+  email                String
+  whatsapp             String?
+  principalName        String
+  principalNip         String?
+  principalMessage     String   @db.Text
+  principalPhoto       String?
+  vision               String   @db.Text
+  mission              String   @db.Text
+  goals                String   @db.Text
+  history              String   @db.Text
+  heroHeadline         String
+  heroSubheadline      String   @db.Text
+  studentCount         Int      @default(480)
+  teacherCount         Int      @default(28)
+  classroomCount       Int      @default(18)
+  extracurricularCount Int      @default(12)
+  mapEmbedUrl          String?  @db.Text
+  facebookUrl          String?
+  instagramUrl         String?
+  youtubeUrl           String?
+  updatedAt            DateTime @updatedAt
+
+  @@map("school_profiles")
+}
+
+model Teacher {
+  id        String   @id @default(uuid())
+  name      String
+  nip       String?
+  role      String
+  subject   String?
+  education String?
+  photo     String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teachers")
+}
+
+model News {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  excerpt     String        @db.Text
+  content     String        @db.Text
+  coverImage  String?
+  category    String
+  status      ContentStatus @default(PUBLISHED)
+  isFeatured  Boolean       @default(false)
+  viewCount   Int           @default(0)
+  authorId    String?
+  author      AdminUser?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  publishedAt DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([slug])
+  @@index([status, publishedAt])
+  @@map("news")
+}
+
+model Announcement {
+  id             String    @id @default(uuid())
+  title          String
+  content        String    @db.Text
+  isImportant    Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  fileAttachment String?
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([isActive, startDate])
+  @@map("announcements")
+}
+
+model GalleryCategory {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  galleries   Gallery[]
+
+  @@map("gallery_categories")
+}
+
+model Gallery {
+  id          String          @id @default(uuid())
+  title       String
+  imageUrl    String
+  description String?         @db.Text
+  categoryId  String
+  category    GalleryCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  isFeatured  Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([categoryId])
+  @@map("galleries")
+}
+
+model Facility {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @db.Text
+  imageUrl    String?
+  iconName    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("facilities")
+}
+
+model AcademicCalendar {
+  id           String    @id @default(uuid())
+  semester     String
+  academicYear String
+  eventDate    DateTime
+  endDate      DateTime?
+  eventName    String
+  description  String?
+  isHoliday    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([academicYear, semester])
+  @@map("academic_calendars")
+}
+
+model Extracurricular {
+  id          String   @id @default(uuid())
+  name        String
+  description String   @db.Text
+  coach       String?
+  schedule    String?
+  image       String?
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("extracurriculars")
+}
+
+model Achievement {
+  id               String   @id @default(uuid())
+  title            String
+  studentName      String
+  competition      String
+  level            String
+  rank             String
+  year             Int
+  certificateImage String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("achievements")
+}
+
+model PPDBSetting {
+  id               String    @id @default("default-ppdb")
+  academicYear     String    @default("2025/2026")
+  isOpen           Boolean   @default(true)
+  startDate        DateTime?
+  endDate          DateTime?
+  quota            Int       @default(120)
+  announcementDate DateTime?
+  guideBookUrl     String?
+  requirements     String    @db.Text
+  flowDescription  String    @db.Text
+  updatedAt        DateTime  @updatedAt
+
+  @@map("ppdb_settings")
+}
+
+model PPDBRegistration {
+  id                String                 @id @default(uuid())
+  registrationNumber String                @unique
+  fullName          String
+  nik               String
+  birthPlace        String
+  birthDate         DateTime
+  gender            Gender
+  religion          String?
+  address           String                 @db.Text
+  rtRw              String?
+  village           String?
+  district          String?
+  parentName        String
+  parentPhone       String
+  parentJob         String?
+  parentIncome      String?
+  previousSchool    String?
+  path              PPDBPath               @default(ZONASI)
+  status            PPDBStatus             @default(PENDING)
+  verificationNotes String?                @db.Text
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  documents         RegistrationDocument[]
+
+  @@index([registrationNumber])
+  @@index([status])
+  @@index([createdAt])
+  @@map("ppdb_registrations")
+}
+
+model RegistrationDocument {
+  id             String           @id @default(uuid())
+  registrationId String
+  registration   PPDBRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  documentType   DocumentType
+  fileUrl        String
+  fileName       String
+  fileSize       Int
+  mimeType       String
+  createdAt      DateTime         @default(now())
+
+  @@index([registrationId])
+  @@map("registration_documents")
+}
+
+model ContactMessage {
+  id         String    @id @default(uuid())
+  name       String
+  email      String
+  phone      String?
+  subject    String
+  message    String    @db.Text
+  isRead     Boolean   @default(false)
+  repliedAt  DateTime?
+  replyNotes String?   @db.Text
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([isRead, createdAt])
+  @@map("contact_messages")
+}
+
+model ActivityLog {
+  id        String     @id @default(uuid())
+  adminId   String?
+  admin     AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  adminName String
+  action    String
+  details   String     @db.Text
+  ipAddress String?
+  createdAt DateTime   @default(now())
+
+  @@index([createdAt])
+  @@map("activity_logs")
+}
