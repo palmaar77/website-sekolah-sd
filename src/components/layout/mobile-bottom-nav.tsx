@@ -57,7 +57,7 @@ export function MobileBottomNav() {
   return (
     <aside
       aria-label="Navigasi Khusus Handphone"
-      className="fixed bottom-0 left-0 right-0 z-50 block md:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[calc(env(safe-area-inset-bottom,0px)+4px)] transition-transform duration-300"
+      className="fixed bottom-0 left-0 right-0 z-50 block lg:hidden bg-white/95 backdrop-blur-lg border-t border-slate-200/90 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[calc(env(safe-area-inset-bottom,0px)+4px)] transition-transform duration-300"
     >
       <div className="grid grid-cols-5 items-center h-16 max-w-md mx-auto px-1">
         {NAV_ITEMS.map((item) => {

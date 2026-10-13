@@ -183,10 +183,10 @@ export default async function HomePage() {
       </section>
 
       {/* =========================================================================
-          1. TAMPILAN KHUSUS HANDPHONE (Mobile Only: block md:hidden)
+          1. TAMPILAN KHUSUS HANDPHONE (Mobile Only: block lg:hidden)
           Menu Cepat Layanan (App Launcher) & Ringkasan Khusus Layar HP
          ========================================================================= */}
-      <section className="block md:hidden px-4 -mt-6 relative z-30 mb-6">
+      <section className="block lg:hidden px-4 -mt-6 relative z-30 mb-6">
         {/* Launcher Menu Pintasan HP */}
         <div className="bg-white rounded-3xl p-5 shadow-xl border border-slate-100">
           <div className="flex items-center justify-between mb-4">
@@ -328,10 +328,10 @@ export default async function HomePage() {
       </section>
 
       {/* =========================================================================
-          2. TAMPILAN KHUSUS LAPTOP / DESKTOP (Desktop Only: hidden md:block)
+          2. TAMPILAN KHUSUS LAPTOP / DESKTOP (Desktop Only: hidden lg:block)
           Statistik Bar Horizontal Lengkap & Luas
          ========================================================================= */}
-      <section className="hidden md:block relative -mt-10 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <section className="hidden lg:block relative -mt-10 z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-6 sm:p-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
             <div className="flex flex-col items-center text-center p-2">
