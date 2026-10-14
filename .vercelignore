@@ -1,0 +1,15 @@
+# Tests
+tests/
+*.test.ts
+
+# Scratch & Logs
+*.log
+scratch/
+check-*.mjs
+find-*.mjs
+update-*.mjs
+
+# Git & Cache
+.git
+.github
+README.md
