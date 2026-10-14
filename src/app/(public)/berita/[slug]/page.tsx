@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import prisma from "@/lib/prisma";
+import { getNewsBySlug, getPublishedNews } from "@/lib/storage/db";
 import {
   Calendar,
   User,
@@ -63,7 +64,12 @@ export default async function NewsDetailPage({
       },
     });
   } catch {
-    // Database connection pending
+    // Database connection offline
+  }
+
+  // Jika tidak ditemukan di Prisma, ambil dari sistem penyimpanan nyata
+  if (!article) {
+    article = getNewsBySlug(slug);
   }
 
   // Jika tidak ditemukan atau masih berstatus draft, jangan tampilkan ke publik!
@@ -71,24 +77,27 @@ export default async function NewsDetailPage({
     notFound();
   }
 
-  // Update view count asynchronously
-  prisma.news
-    .update({
-      where: { id: article.id },
-      data: { viewCount: { increment: 1 } },
-    })
-    .catch(() => {});
-
   // Ambil berita terkait dalam kategori yang sama
-  const relatedNews = await prisma.news.findMany({
-    where: {
-      category: article.category,
-      status: "PUBLISHED",
-      NOT: { id: article.id },
-    },
-    take: 3,
-    orderBy: { publishedAt: "desc" },
-  });
+  let relatedNews: any[] = [];
+  try {
+    relatedNews = await prisma.news.findMany({
+      where: {
+        category: article.category,
+        status: "PUBLISHED",
+        NOT: { id: article.id },
+      },
+      take: 3,
+      orderBy: { publishedAt: "desc" },
+    });
+  } catch {
+    const list = getPublishedNews({ category: article.category, limit: 4 });
+    relatedNews = list.data.filter((n) => n.id !== article.id).slice(0, 3);
+  }
+
+  if (relatedNews.length === 0) {
+    const list = getPublishedNews({ limit: 4 });
+    relatedNews = list.data.filter((n) => n.id !== article.id).slice(0, 3);
+  }
 
   return (
     <article className="pb-24">

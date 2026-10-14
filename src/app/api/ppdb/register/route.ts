@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import { ppdbRegistrationSchema } from "@/lib/validations/ppdb";
-import { generateRegistrationNumber } from "@/lib/utils";
 import { checkRateLimit } from "@/lib/rate-limit";
+import {
+  getPPDBSetting,
+  createPPDBRegistration,
+} from "@/lib/storage/db";
+import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,12 +16,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Batas pengiriman formulir tercapai. Silakan coba kembali nanti.",
+          code: "RATE_LIMIT_EXCEEDED",
+          message: "Batas pengiriman formulir tercapai. Silakan coba kembali beberapa saat lagi.",
         },
         { status: 429 }
       );
     }
 
+    // 1. Cek apakah layanan PPDB sedang dibuka dan aktif di server
+    const setting = getPPDBSetting();
+    if (!setting.isOpen) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: "SERVICE_INACTIVE",
+          message:
+            "Layanan pendaftaran PPDB saat ini belum dibuka / sedang ditutup oleh panitia sekolah. Silakan pantau pengumuman resmi jadwal pembukaan pendaftaran.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // 2. Validasi input di server dengan Zod
     const body = await request.json();
     const parsed = ppdbRegistrationSchema.safeParse(body);
 
@@ -26,7 +45,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Data formulir tidak valid",
+          code: "VALIDATION_ERROR",
+          message: "Data formulir tidak lengkap atau format salah. Mohon periksa kembali isian Anda.",
           errors: parsed.error.flatten().fieldErrors,
         },
         { status: 400 }
@@ -35,39 +55,14 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data;
 
-    // Cek apakah PPDB sedang dibuka
-    const setting = await prisma.pPDBSetting.findFirst();
-    if (setting && !setting.isOpen) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Pendaftaran PPDB saat ini sedang ditutup.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Generate nomor registrasi unik
-    let registrationNumber = generateRegistrationNumber("PPDB");
-    let exists = await prisma.pPDBRegistration.findUnique({
-      where: { registrationNumber },
-    });
-
-    // Handle collision jika kebetulan sama
-    while (exists) {
-      registrationNumber = generateRegistrationNumber("PPDB");
-      exists = await prisma.pPDBRegistration.findUnique({
-        where: { registrationNumber },
-      });
-    }
-
-    const registration = await prisma.pPDBRegistration.create({
-      data: {
-        registrationNumber,
+    // 3. Simpan ke sistem penyimpanan nyata (Persistent Storage)
+    let registration;
+    try {
+      registration = createPPDBRegistration({
         fullName: data.fullName.trim(),
         nik: data.nik.trim(),
         birthPlace: data.birthPlace.trim(),
-        birthDate: new Date(data.birthDate),
+        birthDate: new Date(data.birthDate).toISOString(),
         gender: data.gender,
         religion: data.religion || null,
         address: data.address.trim(),
@@ -80,24 +75,66 @@ export async function POST(request: NextRequest) {
         parentIncome: data.parentIncome || null,
         previousSchool: data.previousSchool || null,
         path: data.path,
-        status: "PENDING",
-      },
-    });
+      });
+    } catch (saveError: any) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: "DUPLICATE_REGISTRATION",
+          message: saveError.message || "Gagal menyimpan pendaftaran ke database.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Coba simpan ke database Prisma bila database PostgreSQL aktif
+    try {
+      await prisma.pPDBRegistration.create({
+        data: {
+          registrationNumber: registration.registrationNumber,
+          fullName: registration.fullName,
+          nik: registration.nik,
+          birthPlace: registration.birthPlace,
+          birthDate: new Date(registration.birthDate),
+          gender: registration.gender,
+          religion: registration.religion || null,
+          address: registration.address,
+          rtRw: registration.rtRw || null,
+          village: registration.village || null,
+          district: registration.district || null,
+          parentName: registration.parentName,
+          parentPhone: registration.parentPhone,
+          parentJob: registration.parentJob || null,
+          parentIncome: registration.parentIncome || null,
+          previousSchool: registration.previousSchool || null,
+          path: registration.path,
+          status: "PENDING",
+        },
+      });
+    } catch {
+      // Prisma offline, penyimpanan disk telah berhasil mencatat data secara permanen
+    }
 
     return NextResponse.json({
       success: true,
-      message: "Pendaftaran PPDB berhasil dikirim",
+      message: "Pendaftaran PPDB berhasil tercatat di sistem sekolah.",
       data: {
         registrationNumber: registration.registrationNumber,
         fullName: registration.fullName,
+        nik: registration.nik,
+        path: registration.path,
         status: registration.status,
         createdAt: registration.createdAt,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("PPDB register error:", error);
     return NextResponse.json(
-      { success: false, message: "Terjadi kesalahan pada sistem pendaftaran" },
+      {
+        success: false,
+        code: "SERVER_ERROR",
+        message: "Terjadi kesalahan internal pada sistem pendaftaran.",
+      },
       { status: 500 }
     );
   }

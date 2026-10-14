@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { getActiveAnnouncements } from "@/lib/storage/db";
 import { Bell, AlertTriangle, Calendar, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,6 @@ export const metadata = {
     "Pengumuman dan maklumat resmi SD Negeri Harapan Bangsa untuk orang tua dan masyarakat.",
 };
 
-
 export default async function PengumumanPage() {
   let announcements: any[] = [];
   try {
@@ -19,7 +19,12 @@ export default async function PengumumanPage() {
       orderBy: { createdAt: "desc" },
     });
   } catch {
-    // Graceful fallback
+    // Database offline, ambil dari sistem penyimpanan nyata
+    announcements = getActiveAnnouncements();
+  }
+
+  if (announcements.length === 0) {
+    announcements = getActiveAnnouncements();
   }
 
   return (

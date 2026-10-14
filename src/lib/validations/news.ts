@@ -35,6 +35,7 @@ export const announcementSchema = z.object({
   isActive: z.boolean().default(true),
   startDate: z.string().optional(),
   endDate: z.string().optional().nullable(),
+  fileAttachment: z.string().optional().nullable(),
 });
 
 export type AnnouncementInput = z.infer<typeof announcementSchema>;

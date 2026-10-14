@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { checkPPDBStatusSchema } from "@/lib/validations/ppdb";
 import { createStudentSessionToken, STUDENT_COOKIE_NAME } from "@/lib/auth/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getPPDBRegistrationByNumber } from "@/lib/storage/db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,17 +31,38 @@ export async function POST(request: NextRequest) {
     }
 
     const { registrationNumber, parentPhone } = parsed.data;
+    const cleanReg = registrationNumber.trim().toUpperCase();
 
-    let registration = null;
-    try {
-      registration = await prisma.pPDBRegistration.findUnique({
-        where: { registrationNumber: registrationNumber.trim().toUpperCase() },
-        include: {
-          documents: true,
+    // Rate limiting per-nomor registrasi (mencegah brute-force tebak nomor wali)
+    const regRateCheck = checkRateLimit(`student-login-reg:${cleanReg}`, {
+      limit: 5,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!regRateCheck.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: "TOO_MANY_ATTEMPTS",
+          message:
+            "Terlalu banyak percobaan masuk untuk nomor registrasi ini. Mohon tunggu 15 menit.",
         },
-      });
-    } catch {
-      // Fallback for demo when DB is not yet running
+        { status: 429 }
+      );
+    }
+
+    // 1. Cari pendaftaran di persistent database
+    let registration: any = getPPDBRegistrationByNumber(cleanReg);
+
+    // 2. Coba cari di Prisma jika DB aktif
+    if (!registration) {
+      try {
+        registration = await prisma.pPDBRegistration.findUnique({
+          where: { registrationNumber: cleanReg },
+          include: { documents: true },
+        });
+      } catch {
+        // Fallback
+      }
     }
 
     // Demo fallback jika database belum terkoneksi

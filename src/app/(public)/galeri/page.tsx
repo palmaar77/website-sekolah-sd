@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { getGalleries, getGalleryCategories } from "@/lib/storage/db";
 import { GalleryClient } from "./gallery-client";
 
 export const metadata = {
@@ -6,7 +7,6 @@ export const metadata = {
   description:
     "Dokumentasi foto kegiatan belajar mengajar, upacara, ekstrakurikuler, dan prestasi SD Negeri Harapan Bangsa.",
 };
-
 
 export default async function GaleriPage() {
   let items: any[] = [];
@@ -23,7 +23,14 @@ export default async function GaleriPage() {
       }),
     ]);
   } catch {
-    // Graceful fallback
+    // Database offline, ambil dari sistem penyimpanan nyata
+    items = getGalleries();
+    categories = getGalleryCategories();
+  }
+
+  if (items.length === 0) {
+    items = getGalleries();
+    categories = getGalleryCategories();
   }
 
   return (

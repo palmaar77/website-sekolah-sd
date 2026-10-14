@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import { checkPPDBStatusSchema } from "@/lib/validations/ppdb";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getPPDBRegistrationByNumber } from "@/lib/storage/db";
+import prisma from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,31 +30,32 @@ export async function POST(request: NextRequest) {
     }
 
     const { registrationNumber, parentPhone } = parsed.data;
+    const cleanReg = registrationNumber.trim().toUpperCase();
 
-    const registration = await prisma.pPDBRegistration.findUnique({
-      where: { registrationNumber },
-      select: {
-        registrationNumber: true,
-        fullName: true,
-        gender: true,
-        path: true,
-        status: true,
-        verificationNotes: true,
-        createdAt: true,
-        parentPhone: true,
-      },
-    });
+    // 1. Cari di persistent storage
+    let registration: any = getPPDBRegistrationByNumber(cleanReg);
+
+    // 2. Jika tidak ada di storage lokal, coba cari di Prisma
+    if (!registration) {
+      try {
+        registration = await prisma.pPDBRegistration.findUnique({
+          where: { registrationNumber: cleanReg },
+        });
+      } catch {
+        // Prisma offline
+      }
+    }
 
     if (!registration) {
       return NextResponse.json(
-        { success: false, message: "Nomor registrasi tidak ditemukan." },
+        { success: false, message: "Nomor registrasi tidak ditemukan dalam basis data pendaftaran." },
         { status: 404 }
       );
     }
 
     // Verifikasi kecocokan nomor telepon untuk melindungi data privasi siswa
     const phoneInputClean = parentPhone.replace(/\D/g, "");
-    const dbPhoneClean = registration.parentPhone.replace(/\D/g, "");
+    const dbPhoneClean = (registration.parentPhone || "").replace(/\D/g, "");
 
     const isPhoneMatch =
       phoneInputClean === dbPhoneClean ||
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("PPDB check status error:", error);
     return NextResponse.json(
-      { success: false, message: "Terjadi kesalahan saat memeriksa status" },
+      { success: false, message: "Terjadi kesalahan saat memeriksa status pendaftaran." },
       { status: 500 }
     );
   }

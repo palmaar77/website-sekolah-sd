@@ -1,5 +1,6 @@
 import Link from "next/link";
 import prisma from "@/lib/prisma";
+import { getPublishedNews } from "@/lib/storage/db";
 import { Search, Calendar, User, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDateIndo } from "@/lib/utils";
@@ -58,7 +59,29 @@ export default async function BeritaPage({
       }),
     ]);
   } catch (err) {
-    // Graceful fallback
+    // Database offline, ambil dari sistem penyimpanan nyata (Persistent Storage)
+    const storageResult = getPublishedNews({
+      q,
+      category,
+      page: currentPage,
+      limit,
+    });
+    news = storageResult.data;
+    totalCount = storageResult.total;
+    categories = storageResult.categories.map((c) => ({ category: c }));
+  }
+
+  // Jika hasil query Prisma kosong, ambil dari persistent storage
+  if (news.length === 0 && !q && !category) {
+    const storageResult = getPublishedNews({
+      q,
+      category,
+      page: currentPage,
+      limit,
+    });
+    news = storageResult.data;
+    totalCount = storageResult.total;
+    categories = storageResult.categories.map((c) => ({ category: c }));
   }
 
   const totalPages = Math.ceil(totalCount / limit);

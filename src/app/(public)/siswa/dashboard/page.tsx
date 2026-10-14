@@ -20,6 +20,10 @@ import {
   HelpCircle,
   ArrowRight,
   School,
+  Award,
+  BookOpen,
+  Lock,
+  ShieldAlert,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -159,13 +163,20 @@ export default function StudentDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Link
+              href="/siswa/nilai"
+              className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition-all active:scale-95"
+            >
+              <Award className="h-4 w-4 text-slate-950" />
+              <span>Nilai & Rapor Siswa</span>
+            </Link>
             <Link
               href={`/ppdb/sukses?no=${encodeURIComponent(student.registrationNumber)}`}
               className="inline-flex items-center gap-2 bg-white text-blue-900 hover:bg-blue-50 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition-all"
             >
               <Printer className="h-4 w-4 text-blue-600" />
-              <span>Cetak Bukti Pendaftaran</span>
+              <span className="hidden sm:inline">Cetak Bukti</span>
             </Link>
             <Button
               variant="outline"
@@ -306,10 +317,69 @@ export default function StudentDashboardPage() {
                 </div>
               </div>
             </Card>
+            {/* Card Pintasan Nilai & Rapor Digital Siswa */}
+            <Card className="p-6 sm:p-8 rounded-3xl border-2 border-blue-200/90 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/30 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+                    <Award className="h-6 w-6 text-amber-300" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full">
+                        Akademik Merdeka
+                      </span>
+                      <span className="text-xs text-slate-500">Semester Ganjil 2024/2025</span>
+                    </div>
+                    <h3 className="text-lg font-extrabold text-slate-900 mt-1">
+                      Rapor Digital & Capaian Nilai Siswa
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">
+                      Pantau perolehan nilai mata pelajaran, capaian kompetensi formatif-sumatif, ekstrakurikuler, dan catatan wali kelas.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="shrink-0">
+                  <Link
+                    href="/siswa/nilai"
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3 rounded-2xl text-xs shadow-md shadow-blue-500/20 transition-all active:scale-95"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    <span>Buka Rapor Lengkap</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </Card>
           </div>
 
           {/* Kolom Kanan: Jadwal Penting & Bantuan */}
           <div className="space-y-6">
+            {/* Kartu Status Keamanan Akun & Proteksi Anti-IDOR */}
+            <Card className="p-6 rounded-3xl border-2 border-emerald-200/80 bg-emerald-50/60 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <span>Proteksi Sesi & Anti-IDOR</span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Akun ini terotentikasi secara aman di server. Sistem RBAC memastikan Anda hanya dapat membaca data milik sendiri:
+              </p>
+              <div className="p-2.5 rounded-xl bg-white border border-emerald-200 font-mono text-[11px] text-slate-700 space-y-1">
+                <div>&bull; ID Akun: <strong>{student.registrationNumber}</strong></div>
+                <div>&bull; Status Otorisasi: <span className="text-emerald-700 font-bold">Terverifikasi</span></div>
+                <div>&bull; IDOR Prevention: <span className="text-blue-700 font-bold">Aktif di Server</span></div>
+              </div>
+              <div className="pt-1">
+                <Link
+                  href="/siswa/nilai/PPDB-2025-A1001"
+                  className="text-[11px] font-semibold text-rose-700 hover:text-rose-900 hover:underline flex items-center gap-1"
+                >
+                  <Lock className="h-3 w-3" />
+                  <span>Uji Akses ID Siswa Lain (Akan Diblokir 403) &rarr;</span>
+                </Link>
+              </div>
+            </Card>
             {/* Jadwal Siswa Baru */}
             <Card className="p-6 rounded-3xl border border-slate-200/80 shadow-xs bg-white space-y-4">
               <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">

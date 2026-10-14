@@ -26,12 +26,22 @@ import { formatDateIndo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 
+import {
+  getPPDBSetting,
+  getPublishedNews,
+  getActiveAnnouncements,
+  getGalleries,
+} from "@/lib/storage/db";
+
 export default async function HomePage() {
   let profile: any = null;
   let latestNews: any[] = [];
   let announcements: any[] = [];
   let featuredGalleries: any[] = [];
   let ekskuls: any[] = [];
+
+  // Ambil pengaturan PPDB nyata dari persistent storage
+  const ppdbSetting = getPPDBSetting();
 
   try {
     profile = await prisma.schoolProfile.findUnique({
@@ -65,6 +75,18 @@ export default async function HomePage() {
   } catch (err) {
     // Graceful fallback if database connection is pending
   }
+
+  // Persistent storage fallback jika database eksternal offline / kosong
+  if (latestNews.length === 0) {
+    latestNews = getPublishedNews().data.slice(0, 3);
+  }
+  if (announcements.length === 0) {
+    announcements = getActiveAnnouncements().slice(0, 2);
+  }
+  if (featuredGalleries.length === 0) {
+    featuredGalleries = getGalleries(undefined, true).slice(0, 6);
+  }
+
 
   const schoolName = profile?.schoolName || "SD Negeri Harapan Bangsa";
   const studentCount = profile?.studentCount || 480;
@@ -118,13 +140,23 @@ export default async function HomePage() {
               </p>
 
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                <Link
-                  href="/ppdb"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-sm px-7 py-3.5 rounded-xl shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95"
-                >
-                  <span>Pendaftaran PPDB 2025</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                {ppdbSetting.isOpen ? (
+                  <Link
+                    href="/ppdb/daftar"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-sm px-7 py-3.5 rounded-xl shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95"
+                  >
+                    <span>Pendaftaran PPDB {ppdbSetting.academicYear}</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/ppdb"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-800/80 hover:bg-slate-800 text-white font-bold text-sm px-7 py-3.5 rounded-xl border border-white/20 transition-all"
+                  >
+                    <span>Informasi PPDB (Belum Dibuka)</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                )}
                 <Link
                   href="/profil"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-6 py-3.5 rounded-xl border border-white/30 backdrop-blur-sm transition-all"
@@ -201,8 +233,14 @@ export default async function HomePage() {
                 <p className="text-[10px] text-slate-500 mt-0.5">Pintasan praktis untuk orang tua & siswa</p>
               </div>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Online 24/7
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                ppdbSetting.isOpen
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-slate-100 text-slate-600 border-slate-200"
+              }`}
+            >
+              {ppdbSetting.isOpen ? "Layanan Aktif" : "Info Terkini"}
             </span>
           </div>
 
@@ -214,8 +252,12 @@ export default async function HomePage() {
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-slate-950 flex items-center justify-center shadow-md shadow-amber-400/20 mb-1.5">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <span className="text-xs font-bold text-slate-900 leading-tight">PPDB 2025</span>
-              <span className="text-[10px] text-amber-700 font-semibold mt-0.5">Daftar Baru</span>
+              <span className="text-xs font-bold text-slate-900 leading-tight">
+                PPDB {ppdbSetting.academicYear ? ppdbSetting.academicYear.split("/")[0] : ""}
+              </span>
+              <span className="text-[10px] text-amber-700 font-semibold mt-0.5">
+                {ppdbSetting.isOpen ? "Daftar Baru" : "Info Jadwal"}
+              </span>
             </Link>
 
             <Link
@@ -687,20 +729,44 @@ export default async function HomePage() {
       {/* 8. CTA PPDB */}
       <section className="py-16 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/10 text-slate-900 text-xs font-bold">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                ppdbSetting.isOpen ? "bg-emerald-600 animate-pulse" : "bg-rose-600"
+              }`}
+            />
+            <span>
+              {ppdbSetting.isOpen
+                ? `Pendaftaran Online Aktif (TA ${ppdbSetting.academicYear})`
+                : "Pendaftaran Online Belum Dibuka / Telah Ditutup"}
+            </span>
+          </div>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
             Siap Bergabung dengan Keluarga Besar Kami?
           </h2>
           <p className="text-sm sm:text-base text-slate-900 max-w-2xl mx-auto font-medium">
-            Pendaftaran Peserta Didik Baru (PPDB) Tahun Ajaran 2025/2026 dibuka secara daring. Dapatkan informasi syarat, alur, dan kuota penerimaan sekarang.
+            {ppdbSetting.isOpen
+              ? `Pendaftaran Peserta Didik Baru (PPDB) Tahun Ajaran ${ppdbSetting.academicYear} dibuka secara daring. Dapatkan informasi syarat, alur, dan kuota (${ppdbSetting.quota} kursi) sekarang.`
+              : "Layanan formulir pendaftaran daring saat ini belum aktif atau di luar jadwal gelombang. Anda tetap dapat membaca petunjuk teknis dan persyaratan."}
           </p>
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/ppdb/daftar"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-sm px-8 py-4 rounded-xl shadow-lg transition-all active:scale-95"
-            >
-              <span>Daftar Online Sekarang</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {ppdbSetting.isOpen ? (
+              <Link
+                href="/ppdb/daftar"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-700 hover:bg-blue-800 text-white font-black text-sm px-8 py-4 rounded-xl shadow-lg transition-all active:scale-95"
+              >
+                <span>Daftar Online Sekarang</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/ppdb"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm px-8 py-4 rounded-xl shadow-lg transition-all"
+              >
+                <span>Lihat Syarat & Alur PPDB</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
             <Link
               href="/ppdb/status"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-100 font-bold text-sm px-6 py-4 rounded-xl shadow-xs"

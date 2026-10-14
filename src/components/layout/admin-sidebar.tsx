@@ -16,6 +16,7 @@ import {
   Settings,
   GraduationCap,
   ExternalLink,
+  Award,
 } from "lucide-react";
 
 const ADMIN_NAV = [
@@ -26,6 +27,7 @@ const ADMIN_NAV = [
   { name: "Galeri Foto", href: "/admin/galeri", icon: ImageIcon },
   { name: "Profil & Fasilitas", href: "/admin/profil", icon: Building2 },
   { name: "Akademik & Kalender", href: "/admin/akademik", icon: CalendarDays },
+  { name: "Nilai & Rapor Siswa", href: "/admin/nilai", icon: Award },
   { name: "Pendaftar PPDB", href: "/admin/ppdb", icon: UserCheck },
   { name: "Pesan Masuk", href: "/admin/pesan", icon: Mail },
   { name: "Pengaturan & Log", href: "/admin/pengaturan", icon: Settings },

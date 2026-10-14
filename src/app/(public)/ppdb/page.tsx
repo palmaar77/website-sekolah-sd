@@ -1,5 +1,6 @@
 import Link from "next/link";
 import prisma from "@/lib/prisma";
+import { getPPDBSetting } from "@/lib/storage/db";
 import {
   FileText,
   Calendar,
@@ -12,6 +13,8 @@ import {
   MapPin,
   Award,
   BookOpen,
+  AlertCircle,
+  Lock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDateIndo } from "@/lib/utils";
@@ -21,7 +24,6 @@ export const metadata = {
   description:
     "Persyaratan, Jadwal, Alur Pendaftaran, dan Kuota Penerimaan Peserta Didik Baru SD Negeri Harapan Bangsa.",
 };
-
 
 export default async function PPDBInfoPage() {
   let setting: any = null;
@@ -34,7 +36,12 @@ export default async function PPDBInfoPage() {
       setting = await prisma.pPDBSetting.findFirst();
     }
   } catch {
-    // Graceful fallback
+    // Database offline, ambil dari sistem penyimpanan nyata
+    setting = getPPDBSetting();
+  }
+
+  if (!setting) {
+    setting = getPPDBSetting();
   }
 
   const requirementsList: string[] = (setting?.requirements || "")
@@ -71,9 +78,23 @@ export default async function PPDBInfoPage() {
       {/* Hero Banner PPDB */}
       <section className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white py-16 lg:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center space-y-5">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 bg-amber-400/20 px-4 py-1.5 rounded-full border border-amber-400/30">
-            Tahun Ajaran {setting?.academicYear || "2025/2026"}
-          </span>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 bg-amber-400/20 px-4 py-1.5 rounded-full border border-amber-400/30">
+              Tahun Ajaran {setting?.academicYear || "2025/2026"}
+            </span>
+            {setting?.isOpen ? (
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-emerald-300 bg-emerald-500/20 px-4 py-1.5 rounded-full border border-emerald-400/30">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Pendaftaran Aktif</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-rose-300 bg-rose-500/20 px-4 py-1.5 rounded-full border border-rose-400/30">
+                <Lock className="h-3.5 w-3.5 text-rose-400" />
+                <span>Pendaftaran Belum Dibuka / Ditutup</span>
+              </span>
+            )}
+          </div>
+
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight">
             Penerimaan Peserta Didik Baru (PPDB)
           </h1>
@@ -82,13 +103,20 @@ export default async function PPDBInfoPage() {
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/ppdb/daftar"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-sm px-8 py-4 rounded-xl shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95"
-            >
-              <span>Daftar Online Sekarang</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {setting?.isOpen ? (
+              <Link
+                href="/ppdb/daftar"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-sm px-8 py-4 rounded-xl shadow-lg shadow-amber-400/20 transition-all hover:scale-105 active:scale-95"
+              >
+                <span>Daftar Online Sekarang</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <div className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-800/80 text-slate-300 font-bold text-sm px-8 py-4 rounded-xl border border-slate-700 cursor-not-allowed">
+                <Lock className="h-4 w-4 text-slate-400" />
+                <span>Layanan Pendaftaran Belum Dibuka</span>
+              </div>
+            )}
             <Link
               href="/ppdb/status"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-7 py-4 rounded-xl border border-white/30 backdrop-blur-sm"
