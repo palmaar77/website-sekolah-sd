@@ -36,6 +36,11 @@ interface PPDBApplicant {
   gender: "LAKI_LAKI" | "PEREMPUAN";
   religion: string | null;
   address: string;
+  rt?: string | null;
+  rw?: string | null;
+  rtRw?: string | null;
+  village?: string | null;
+  district?: string | null;
   parentName: string;
   parentPhone: string;
   parentJob: string | null;
@@ -426,6 +431,13 @@ export default function AdminPPDBPage() {
                   <span className="text-slate-400 block">Alamat Tempat Tinggal:</span>
                   <span className="font-semibold text-slate-900 leading-relaxed">
                     {selectedApplicant.address}
+                    {selectedApplicant.rt || selectedApplicant.rw
+                      ? ` (RT ${selectedApplicant.rt || "-"} / RW ${selectedApplicant.rw || "-"})`
+                      : selectedApplicant.rtRw
+                      ? ` (RT/RW: ${selectedApplicant.rtRw})`
+                      : ""}
+                    {selectedApplicant.village ? `, Kel. ${selectedApplicant.village}` : ""}
+                    {selectedApplicant.district ? `, Kec. ${selectedApplicant.district}` : ""}
                   </span>
                 </div>
               </div>

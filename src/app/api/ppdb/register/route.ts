@@ -55,6 +55,15 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data;
 
+    // Normalisasi dan hitung RT/RW
+    const rtClean = data.rt?.trim() || null;
+    const rwClean = data.rw?.trim() || null;
+    const computedRtRw =
+      data.rtRw?.trim() ||
+      (rtClean && rwClean
+        ? `${rtClean} / ${rwClean}`
+        : rtClean || rwClean || null);
+
     // 3. Simpan ke sistem penyimpanan nyata (Persistent Storage)
     let registration;
     try {
@@ -66,7 +75,9 @@ export async function POST(request: NextRequest) {
         gender: data.gender,
         religion: data.religion || null,
         address: data.address.trim(),
-        rtRw: data.rtRw || null,
+        rt: rtClean,
+        rw: rwClean,
+        rtRw: computedRtRw,
         village: data.village || null,
         district: data.district || null,
         parentName: data.parentName.trim(),

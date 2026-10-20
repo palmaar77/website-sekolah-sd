@@ -22,6 +22,30 @@ describe("Validasi Formulir (Zod Schemas)", () => {
     assert.equal(result.success, true);
   });
 
+  it("harus meloloskan pendaftaran PPDB dengan kolom RT dan RW terpisah", () => {
+    const dataWithSeparateRtRw = {
+      fullName: "Nurul Aulia",
+      nik: "3171012345670002",
+      birthPlace: "Bandung",
+      birthDate: "2018-06-15",
+      gender: "PEREMPUAN" as const,
+      address: "Jl. Dahlia No. 45",
+      rt: "003",
+      rw: "007",
+      village: "Sukamaju",
+      district: "Cibeunying",
+      parentName: "Rudi Hidayat",
+      parentPhone: "081312345678",
+      path: "ZONASI" as const,
+    };
+    const result = ppdbRegistrationSchema.safeParse(dataWithSeparateRtRw);
+    assert.equal(result.success, true);
+    if (result.success) {
+      assert.equal(result.data.rt, "003");
+      assert.equal(result.data.rw, "007");
+    }
+  });
+
   it("harus menolak NIK yang kurang dari 16 digit atau mengandung huruf", () => {
     const invalidData = {
       fullName: "Ahmad Rizky",

@@ -54,7 +54,8 @@ export default function PPDBDaftarPage() {
   const [parentPhone, setParentPhone] = React.useState("");
   const [parentJob, setParentJob] = React.useState("");
   const [address, setAddress] = React.useState("");
-  const [rtRw, setRtRw] = React.useState("");
+  const [rt, setRt] = React.useState("");
+  const [rw, setRw] = React.useState("");
   const [village, setVillage] = React.useState("");
   const [district, setDistrict] = React.useState("");
 
@@ -100,7 +101,14 @@ export default function PPDBDaftarPage() {
         if (parsed.parentPhone) setParentPhone(parsed.parentPhone);
         if (parsed.parentJob) setParentJob(parsed.parentJob);
         if (parsed.address) setAddress(parsed.address);
-        if (parsed.rtRw) setRtRw(parsed.rtRw);
+        if (parsed.rt) setRt(parsed.rt);
+        if (parsed.rw) setRw(parsed.rw);
+        // Fallback kompatibilitas draf lama yang masih menggabungkan format RT/RW
+        if (!parsed.rt && !parsed.rw && parsed.rtRw) {
+          const parts = String(parsed.rtRw).split("/");
+          if (parts[0]) setRt(parts[0].trim());
+          if (parts[1]) setRw(parts[1].trim());
+        }
         if (parsed.village) setVillage(parsed.village);
         if (parsed.district) setDistrict(parsed.district);
         setHasDraft(true);
@@ -124,7 +132,9 @@ export default function PPDBDaftarPage() {
         parentPhone,
         parentJob,
         address,
-        rtRw,
+        rt,
+        rw,
+        rtRw: rt && rw ? `${rt} / ${rw}` : rt || rw || "",
         village,
         district,
         ...fields,
@@ -149,7 +159,8 @@ export default function PPDBDaftarPage() {
       setParentPhone("");
       setParentJob("");
       setAddress("");
-      setRtRw("");
+      setRt("");
+      setRw("");
       setVillage("");
       setDistrict("");
       setHasDraft(false);
@@ -193,7 +204,12 @@ export default function PPDBDaftarPage() {
         parentPhone,
         parentJob: parentJob || undefined,
         address,
-        rtRw: rtRw || undefined,
+        rt: rt.trim() || undefined,
+        rw: rw.trim() || undefined,
+        rtRw:
+          rt.trim() && rw.trim()
+            ? `${rt.trim()} / ${rw.trim()}`
+            : rt.trim() || rw.trim() || undefined,
         village: village || undefined,
         district: district || undefined,
       };
@@ -530,16 +546,28 @@ export default function PPDBDaftarPage() {
                 placeholder="Jl. Anggrek No. 12, Kelurahan Contoh..."
               />
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <Input
-                  label="RT / RW"
+                  label="RT"
                   disabled={!isServiceOpen || isSubmitting}
-                  value={rtRw}
+                  value={rt}
                   onChange={(e) => {
-                    setRtRw(e.target.value);
-                    saveDraft({ rtRw: e.target.value });
+                    setRt(e.target.value);
+                    saveDraft({ rt: e.target.value });
                   }}
-                  placeholder="03 / 05"
+                  placeholder="Contoh: 003"
+                  maxLength={5}
+                />
+                <Input
+                  label="RW"
+                  disabled={!isServiceOpen || isSubmitting}
+                  value={rw}
+                  onChange={(e) => {
+                    setRw(e.target.value);
+                    saveDraft({ rw: e.target.value });
+                  }}
+                  placeholder="Contoh: 005"
+                  maxLength={5}
                 />
                 <Input
                   label="Kelurahan / Desa"

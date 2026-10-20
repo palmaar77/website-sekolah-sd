@@ -53,6 +53,8 @@ export interface PPDBRegistrationData {
   gender: "LAKI_LAKI" | "PEREMPUAN";
   religion?: string | null;
   address: string;
+  rt?: string | null;
+  rw?: string | null;
   rtRw?: string | null;
   village?: string | null;
   district?: string | null;

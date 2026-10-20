@@ -23,6 +23,8 @@ export const ppdbRegistrationSchema = z.object({
   address: z
     .string()
     .min(5, "Alamat lengkap minimal 5 karakter"),
+  rt: z.string().optional(),
+  rw: z.string().optional(),
   rtRw: z.string().optional(),
   village: z.string().optional(),
   district: z.string().optional(),

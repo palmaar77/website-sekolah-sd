@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { getPPDBRegistrations, getPPDBSetting } from "@/lib/storage/db";
 import { formatDateIndo } from "@/lib/utils";
-import prisma from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,6 +42,10 @@ export async function GET(request: NextRequest) {
         "Tanggal Lahir",
         "Jenis Kelamin",
         "Alamat",
+        "RT",
+        "RW",
+        "Kelurahan / Desa",
+        "Kecamatan",
         "Nama Wali",
         "No. Telepon Wali",
         "Pekerjaan Wali",
@@ -58,6 +61,8 @@ export async function GET(request: NextRequest) {
           if (!str) return '""';
           return `"${String(str).replace(/"/g, '""')}"`;
         };
+        const rtVal = r.rt || (r.rtRw ? r.rtRw.split("/")[0]?.trim() : "");
+        const rwVal = r.rw || (r.rtRw ? r.rtRw.split("/")[1]?.trim() : "");
         return [
           escapeCsv(r.registrationNumber),
           escapeCsv(r.fullName),
@@ -66,6 +71,10 @@ export async function GET(request: NextRequest) {
           escapeCsv(formatDateIndo(r.birthDate)),
           escapeCsv(r.gender === "LAKI_LAKI" ? "Laki-laki" : "Perempuan"),
           escapeCsv(r.address),
+          escapeCsv(rtVal),
+          escapeCsv(rwVal),
+          escapeCsv(r.village),
+          escapeCsv(r.district),
           escapeCsv(r.parentName),
           escapeCsv(r.parentPhone),
           escapeCsv(r.parentJob),
