@@ -55,13 +55,20 @@ export async function POST(request: NextRequest) {
     const ext = path.extname(file.name).toLowerCase() || (file.type === "application/pdf" ? ".pdf" : ".jpg");
     const safeFilename = `${crypto.randomUUID()}${ext}`;
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
+    let publicUrl = "";
+    try {
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await mkdir(uploadDir, { recursive: true });
 
-    const filePath = path.join(uploadDir, safeFilename);
-    await writeFile(filePath, buffer);
+      const filePath = path.join(uploadDir, safeFilename);
+      await writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/${safeFilename}`;
+      publicUrl = `/uploads/${safeFilename}`;
+    } catch (writeErr) {
+      // Fallback untuk lingkungan serverless / read-only (misal Vercel)
+      console.warn("Disk upload unavailable, using Base64 Data URL fallback:", writeErr);
+      publicUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
+    }
 
     return NextResponse.json({
       success: true,

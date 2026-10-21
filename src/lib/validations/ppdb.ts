@@ -57,8 +57,11 @@ export const checkPPDBStatusSchema = z.object({
 export type CheckPPDBStatusInput = z.infer<typeof checkPPDBStatusSchema>;
 
 export const updatePPDBStatusSchema = z.object({
-  status: z.enum(["PENDING", "VERIFYING", "ACCEPTED", "REJECTED"]),
-  verificationNotes: z.string().optional(),
+  status: z.enum(["PENDING", "VERIFYING", "ACCEPTED", "REJECTED"], {
+    error: "Pilih status verifikasi yang valid (PENDING, VERIFYING, ACCEPTED, atau REJECTED)",
+  }),
+  verificationNotes: z.string().nullable().optional(),
 });
 
 export type UpdatePPDBStatusInput = z.infer<typeof updatePPDBStatusSchema>;
+

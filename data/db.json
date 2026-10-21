@@ -187,7 +187,20 @@
       "verifiedAt": "2025-05-11T09:00:00.000Z",
       "createdAt": "2025-05-03T11:20:00.000Z",
       "updatedAt": "2025-05-11T09:00:00.000Z",
-      "documents": []
+      "documents": [
+        {
+          "id": "doc-a1001-1",
+          "documentType": "Akta Kelahiran",
+          "fileName": "Akta_Kelahiran_Bintang.pdf",
+          "fileUrl": "https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+          "id": "doc-a1001-2",
+          "documentType": "Kartu Keluarga",
+          "fileName": "KK_Hendra_Nusantara.pdf",
+          "fileUrl": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80"
+        }
+      ]
     },
     {
       "id": "reg-demo-003",
@@ -207,11 +220,32 @@
       "parentJob": "Wiraswasta",
       "previousSchool": "PAUD Tunas Harapan",
       "path": "PRESTASI",
-      "status": "VERIFYING",
-      "verificationNotes": "Sedang dilakukan verifikasi sertifikat prestasi juara lomba melukis.",
+      "status": "ACCEPTED",
+      "verificationNotes": "Berkas Akta Kelahiran dan Kartu Keluarga telah diverifikasi lengkap dan sesuai prioritas penerimaan.",
       "createdAt": "2025-05-05T14:15:00.000Z",
-      "updatedAt": "2025-05-05T14:15:00.000Z",
-      "documents": []
+      "updatedAt": "2026-10-21T15:19:24.434Z",
+      "documents": [
+        {
+          "id": "doc-b2002-1",
+          "documentType": "Akta Kelahiran",
+          "fileName": "Akta_Kelahiran_Clarissa.pdf",
+          "fileUrl": "https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+          "id": "doc-b2002-2",
+          "documentType": "Kartu Keluarga",
+          "fileName": "KK_Dewi_Lestari.pdf",
+          "fileUrl": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80"
+        },
+        {
+          "id": "doc-b2002-3",
+          "documentType": "Piagam Prestasi (Juara 1 Melukis)",
+          "fileName": "Piagam_Lomba_Melukis_Clarissa.pdf",
+          "fileUrl": "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80"
+        }
+      ],
+      "verifiedBy": "Administrator Sekolah",
+      "verifiedAt": "2026-10-21T15:19:24.434Z"
     }
   ],
   "news": [

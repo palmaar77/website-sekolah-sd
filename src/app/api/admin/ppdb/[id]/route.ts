@@ -16,14 +16,21 @@ export async function GET(
   try {
     await requireAuth(["SUPER_ADMIN", "ADMIN", "STAFF"]);
     const { id } = await params;
+    const cleanId = decodeURIComponent(id).trim();
 
-    let item = getPPDBRegistrationById(id);
+    let item = getPPDBRegistrationById(cleanId);
     if (!item) {
       try {
-        item = await prisma.pPDBRegistration.findUnique({
-          where: { id },
+        item = (await prisma.pPDBRegistration.findFirst({
+          where: {
+            OR: [
+              { id: cleanId },
+              { registrationNumber: cleanId },
+              { registrationNumber: cleanId.toUpperCase() },
+            ],
+          },
           include: { documents: true },
-        }) as any;
+        })) as any;
       } catch {}
     }
 
@@ -48,56 +55,85 @@ export async function PATCH(
   try {
     const session = await requireAuth(["SUPER_ADMIN", "ADMIN", "STAFF"]);
     const { id } = await params;
+    const cleanId = decodeURIComponent(id).trim();
     const body = await request.json();
     const parsed = updatePPDBStatusSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
+        {
+          success: false,
+          message: "Validasi verifikasi gagal: mohon periksa kembali status dan catatan verifikasi.",
+          errors: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
 
     const { status, verificationNotes } = parsed.data;
+    const cleanNotes = verificationNotes && verificationNotes.trim() ? verificationNotes.trim() : null;
 
     // 1. Simpan perubahan ke persistent storage
-    let updated;
+    let updated: any;
     try {
       updated = updatePPDBRegistrationStatus(
-        id,
+        cleanId,
         status as any,
-        verificationNotes,
+        cleanNotes,
         session.name
       );
     } catch {
-      // Jika tidak di storage disk, coba Prisma
+      // Jika tidak di storage disk, mungkin ada di Prisma
     }
 
     // 2. Coba update Prisma jika database online
     try {
-      await prisma.pPDBRegistration.update({
-        where: { id },
-        data: {
-          status: status as any,
-          verificationNotes: verificationNotes || null,
-          verifiedBy: session.name,
-          verifiedAt: new Date(),
+      const reg = await prisma.pPDBRegistration.findFirst({
+        where: {
+          OR: [
+            { id: cleanId },
+            { registrationNumber: cleanId },
+            { registrationNumber: cleanId.toUpperCase() },
+            ...(updated ? [{ registrationNumber: updated.registrationNumber }] : []),
+          ],
         },
       });
+
+      if (reg) {
+        const prismaUpdated = await prisma.pPDBRegistration.update({
+          where: { id: reg.id },
+          data: {
+            status: status as any,
+            verificationNotes: cleanNotes,
+            verifiedBy: session.name,
+            verifiedAt: new Date(),
+          },
+        });
+        if (!updated) {
+          updated = prismaUpdated;
+        }
+      }
     } catch {}
+
+    if (!updated) {
+      return NextResponse.json(
+        { success: false, message: `Pendaftar dengan nomor/ID "${cleanId}" tidak ditemukan.` },
+        { status: 404 }
+      );
+    }
 
     try {
       await logActivity({
         adminId: session.userId,
         adminName: session.name,
         action: "UPDATE_PPDB_STATUS",
-        details: `Mengubah status pendaftar ${updated?.registrationNumber || id} menjadi ${status}`,
+        details: `Mengubah status verifikasi pendaftar ${updated?.registrationNumber || cleanId} menjadi ${status}`,
       });
     } catch {}
 
     return NextResponse.json({
       success: true,
-      message: "Status pendaftaran berhasil diperbarui",
+      message: "Status verifikasi pendaftaran berhasil diperbarui",
       data: updated,
     });
   } catch (error: unknown) {
@@ -117,11 +153,23 @@ export async function DELETE(
   try {
     const session = await requireAuth(["SUPER_ADMIN", "ADMIN"]);
     const { id } = await params;
+    const cleanId = decodeURIComponent(id).trim();
 
-    const deleted = deletePPDBRegistration(id);
+    const deleted = deletePPDBRegistration(cleanId);
 
     try {
-      await prisma.pPDBRegistration.delete({ where: { id } });
+      const reg = await prisma.pPDBRegistration.findFirst({
+        where: {
+          OR: [
+            { id: cleanId },
+            { registrationNumber: cleanId },
+            { registrationNumber: cleanId.toUpperCase() },
+          ],
+        },
+      });
+      if (reg) {
+        await prisma.pPDBRegistration.delete({ where: { id: reg.id } });
+      }
     } catch {}
 
     try {
@@ -129,7 +177,7 @@ export async function DELETE(
         adminId: session.userId,
         adminName: session.name,
         action: "DELETE_PPDB",
-        details: `Menghapus data pendaftar ID: ${id}`,
+        details: `Menghapus data pendaftar ID: ${cleanId}`,
       });
     } catch {}
 

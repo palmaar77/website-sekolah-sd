@@ -113,7 +113,7 @@ export default function PPDBDaftarPage() {
         if (parsed.district) setDistrict(parsed.district);
         setHasDraft(true);
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // 3. Simpan perubahan ke draft localStorage secara real-time
@@ -141,7 +141,7 @@ export default function PPDBDaftarPage() {
       };
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(currentDraft));
       setHasDraft(true);
-    } catch {}
+    } catch { }
   };
 
   const handleClearDraft = () => {
@@ -232,7 +232,7 @@ export default function PPDBDaftarPage() {
       } else {
         setErrorMsg(
           data.message ||
-            "Gagal mengirim formulir pendaftaran. Silakan periksa kembali data yang diisi."
+          "Gagal mengirim formulir pendaftaran. Silakan periksa kembali data yang diisi."
         );
         if (data.errors) {
           setFieldErrors(data.errors);
@@ -609,11 +609,10 @@ export default function PPDBDaftarPage() {
               size="lg"
               disabled={!isServiceOpen || isSubmitting}
               isLoading={isSubmitting}
-              className={`w-full text-sm font-extrabold py-4 rounded-2xl shadow-lg transition-all ${
-                isServiceOpen
-                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20"
-                  : "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
-              }`}
+              className={`w-full text-sm font-extrabold py-4 rounded-2xl shadow-lg transition-all ${isServiceOpen
+                ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20"
+                : "bg-slate-300 text-slate-500 cursor-not-allowed shadow-none"
+                }`}
             >
               {isSubmitting ? (
                 "Mengirim Berkas Pendaftaran..."

@@ -209,7 +209,20 @@ function getInitialSeedData(): DatabaseSchema {
         verifiedAt: "2025-05-11T09:00:00.000Z",
         createdAt: "2025-05-03T11:20:00.000Z",
         updatedAt: "2025-05-11T09:00:00.000Z",
-        documents: [],
+        documents: [
+          {
+            id: "doc-a1001-1",
+            documentType: "Akta Kelahiran",
+            fileName: "Akta_Kelahiran_Bintang.pdf",
+            fileUrl: "https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=800&q=80",
+          },
+          {
+            id: "doc-a1001-2",
+            documentType: "Kartu Keluarga",
+            fileName: "KK_Hendra_Nusantara.pdf",
+            fileUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80",
+          },
+        ],
       },
       {
         id: "reg-demo-003",
@@ -233,7 +246,26 @@ function getInitialSeedData(): DatabaseSchema {
         verificationNotes: "Sedang dilakukan verifikasi sertifikat prestasi juara lomba melukis.",
         createdAt: "2025-05-05T14:15:00.000Z",
         updatedAt: "2025-05-05T14:15:00.000Z",
-        documents: [],
+        documents: [
+          {
+            id: "doc-b2002-1",
+            documentType: "Akta Kelahiran",
+            fileName: "Akta_Kelahiran_Clarissa.pdf",
+            fileUrl: "https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=800&q=80",
+          },
+          {
+            id: "doc-b2002-2",
+            documentType: "Kartu Keluarga",
+            fileName: "KK_Dewi_Lestari.pdf",
+            fileUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80",
+          },
+          {
+            id: "doc-b2002-3",
+            documentType: "Piagam Prestasi (Juara 1 Melukis)",
+            fileName: "Piagam_Lomba_Melukis_Clarissa.pdf",
+            fileUrl: "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80",
+          },
+        ],
       },
     ],
     news: [
@@ -425,33 +457,67 @@ Dipandu oleh dokter kecil dari UKS dan guru kelas, para siswa belajar tentang pi
   };
 }
 
+// Path fallback untuk serverless environment (misal Vercel /tmp)
+const TMP_DATA_DIR = path.join("/tmp", "data");
+const TMP_DB_FILE = path.join(TMP_DATA_DIR, "db.json");
+
 /**
- * Membaca database dari disk
+ * Membaca database dari memori/disk (mendukung Vercel Serverless)
  */
 function readDb(): DatabaseSchema {
+  // 1. Coba baca dari in-memory cache global terlebih dahulu jika ada
+  if ((globalThis as any).__school_db) {
+    return (globalThis as any).__school_db as DatabaseSchema;
+  }
+
+  // 2. Coba baca dari /tmp/data/db.json jika berjalan di lingkungan serverless
+  try {
+    if (fs.existsSync(TMP_DB_FILE)) {
+      const tmpContent = fs.readFileSync(TMP_DB_FILE, "utf-8");
+      const parsed = JSON.parse(tmpContent) as DatabaseSchema;
+      (globalThis as any).__school_db = parsed;
+      return parsed;
+    }
+  } catch {}
+
+  // 3. Baca dari DATA_DIR di root proyek
   try {
     if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      try {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      } catch {}
     }
 
-    if (!fs.existsSync(DB_FILE)) {
-      const initialData = getInitialSeedData();
+    if (fs.existsSync(DB_FILE)) {
+      const content = fs.readFileSync(DB_FILE, "utf-8");
+      const parsed = JSON.parse(content) as DatabaseSchema;
+      (globalThis as any).__school_db = parsed;
+      return parsed;
+    }
+
+    const initialData = getInitialSeedData();
+    try {
       fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf-8");
-      return initialData;
-    }
-
-    const content = fs.readFileSync(DB_FILE, "utf-8");
-    return JSON.parse(content) as DatabaseSchema;
+    } catch {}
+    (globalThis as any).__school_db = initialData;
+    return initialData;
   } catch (err) {
     console.error("Gagal membaca database persistent:", err);
-    return getInitialSeedData();
+    const initialData = getInitialSeedData();
+    (globalThis as any).__school_db = initialData;
+    return initialData;
   }
 }
 
 /**
- * Menyimpan database ke disk secara atomik
+ * Menyimpan database ke disk dan memori secara atomik
  */
 function writeDb(data: DatabaseSchema): void {
+  // 1. Simpan selalu ke in-memory cache
+  (globalThis as any).__school_db = data;
+
+  // 2. Coba tulis ke DATA_DIR
+  let writeSuccess = false;
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -459,8 +525,23 @@ function writeDb(data: DatabaseSchema): void {
     const tempFile = `${DB_FILE}.tmp.${Date.now()}`;
     fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), "utf-8");
     fs.renameSync(tempFile, DB_FILE);
-  } catch (err) {
-    console.error("Gagal menulis database persistent:", err);
+    writeSuccess = true;
+  } catch {
+    // Lingkungan read-only (seperti Vercel), lanjutkan ke fallback /tmp
+  }
+
+  // 3. Fallback tulis ke /tmp/data/db.json bila di serverless/read-only filesystem
+  if (!writeSuccess) {
+    try {
+      if (!fs.existsSync(TMP_DATA_DIR)) {
+        fs.mkdirSync(TMP_DATA_DIR, { recursive: true });
+      }
+      const tmpTempFile = `${TMP_DB_FILE}.tmp.${Date.now()}`;
+      fs.writeFileSync(tmpTempFile, JSON.stringify(data, null, 2), "utf-8");
+      fs.renameSync(tmpTempFile, TMP_DB_FILE);
+    } catch (tmpErr) {
+      console.error("Gagal menulis fallback database /tmp:", tmpErr);
+    }
   }
 }
 
@@ -530,12 +611,25 @@ export function getPPDBRegistrations(options: {
 export function getPPDBRegistrationByNumber(regNumber: string): PPDBRegistrationData | null {
   const db = readDb();
   const clean = regNumber.trim().toUpperCase();
-  return db.ppdbRegistrations.find((r) => r.registrationNumber === clean) || null;
+  return (
+    db.ppdbRegistrations.find(
+      (r) => r.registrationNumber.toUpperCase() === clean || r.id === regNumber.trim()
+    ) || null
+  );
 }
 
 export function getPPDBRegistrationById(id: string): PPDBRegistrationData | null {
   const db = readDb();
-  return db.ppdbRegistrations.find((r) => r.id === id) || null;
+  const clean = id.trim();
+  const cleanUpper = clean.toUpperCase();
+  return (
+    db.ppdbRegistrations.find(
+      (r) =>
+        r.id === clean ||
+        r.registrationNumber.toUpperCase() === cleanUpper ||
+        r.registrationNumber === clean
+    ) || null
+  );
 }
 
 export function createPPDBRegistration(
@@ -579,9 +673,16 @@ export function updatePPDBRegistrationStatus(
   verifiedBy?: string | null
 ): PPDBRegistrationData {
   const db = readDb();
-  const idx = db.ppdbRegistrations.findIndex((r) => r.id === id || r.registrationNumber === id);
+  const clean = id.trim();
+  const cleanUpper = clean.toUpperCase();
+  const idx = db.ppdbRegistrations.findIndex(
+    (r) =>
+      r.id === clean ||
+      r.registrationNumber.toUpperCase() === cleanUpper ||
+      r.registrationNumber === clean
+  );
   if (idx === -1) {
-    throw new Error("Data pendaftaran tidak ditemukan.");
+    throw new Error(`Data pendaftaran dengan ID/Nomor Registrasi "${id}" tidak ditemukan.`);
   }
 
   const current = db.ppdbRegistrations[idx];
@@ -589,8 +690,13 @@ export function updatePPDBRegistrationStatus(
   const updated: PPDBRegistrationData = {
     ...current,
     status,
-    verificationNotes: verificationNotes !== undefined ? verificationNotes : current.verificationNotes,
-    verifiedBy: verifiedBy || current.verifiedBy,
+    verificationNotes:
+      verificationNotes !== undefined
+        ? verificationNotes && verificationNotes.trim()
+          ? verificationNotes.trim()
+          : null
+        : current.verificationNotes,
+    verifiedBy: verifiedBy || current.verifiedBy || "Panitia PPDB",
     verifiedAt: now,
     updatedAt: now,
   };
@@ -602,8 +708,15 @@ export function updatePPDBRegistrationStatus(
 
 export function deletePPDBRegistration(id: string): boolean {
   const db = readDb();
+  const clean = id.trim();
+  const cleanUpper = clean.toUpperCase();
   const initialLen = db.ppdbRegistrations.length;
-  db.ppdbRegistrations = db.ppdbRegistrations.filter((r) => r.id !== id && r.registrationNumber !== id);
+  db.ppdbRegistrations = db.ppdbRegistrations.filter(
+    (r) =>
+      r.id !== clean &&
+      r.registrationNumber.toUpperCase() !== cleanUpper &&
+      r.registrationNumber !== clean
+  );
   if (db.ppdbRegistrations.length !== initialLen) {
     writeDb(db);
     return true;
@@ -843,6 +956,40 @@ export function deleteAnnouncement(id: string): boolean {
 export function getGalleryCategories(): GalleryCategoryData[] {
   const db = readDb();
   return db.galleryCategories.sort((a, b) => a.order - b.order);
+}
+
+export function createGalleryCategory(input: {
+  name: string;
+  description?: string | null;
+  order?: number;
+}): GalleryCategoryData {
+  const db = readDb();
+  const cleanName = input.name.trim();
+  const existing = db.galleryCategories.find(
+    (c) => c.name.toLowerCase() === cleanName.toLowerCase()
+  );
+  if (existing) {
+    return existing;
+  }
+
+  const baseSlug = slugify(cleanName);
+  let slug = baseSlug;
+  let counter = 1;
+  while (db.galleryCategories.some((c) => c.slug === slug)) {
+    slug = `${baseSlug}-${counter++}`;
+  }
+
+  const newCat: GalleryCategoryData = {
+    id: `cat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 5)}`,
+    name: cleanName,
+    slug,
+    description: input.description || null,
+    order: input.order ?? db.galleryCategories.length + 1,
+  };
+
+  db.galleryCategories.push(newCat);
+  writeDb(db);
+  return newCat;
 }
 
 export function getGalleries(categoryFilter?: string, isFeatured?: boolean): GalleryItemData[] {
