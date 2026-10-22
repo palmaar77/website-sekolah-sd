@@ -46,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={`${jakarta.variable} h-full antialiased scroll-smooth`}>
+    <html lang="id" data-scroll-behavior="smooth" className={`${jakarta.variable} h-full antialiased scroll-smooth`}>
       <body className="min-h-full flex flex-col font-sans bg-slate-50 text-slate-900">
         {children}
       </body>
