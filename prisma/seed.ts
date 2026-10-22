@@ -9,7 +9,7 @@ async function main() {
   // 1. Akun Admin Awal dari Environment Variables
   const adminEmail = process.env.ADMIN_EMAIL || "admin@sdharapanbangsa.sch.id";
   const adminPassword = process.env.ADMIN_PASSWORD || "AdminSekolah2025!Secure";
-  const adminName = process.env.ADMIN_NAME || "Administrator Sekolah (Akun Demo)";
+  const adminName = process.env.ADMIN_NAME || "Administrator Sekolah";
 
   const hashedPassword = await bcrypt.hash(adminPassword, 12);
 

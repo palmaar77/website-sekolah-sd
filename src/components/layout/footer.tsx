@@ -6,7 +6,7 @@ import {
   Mail,
   Clock,
   ExternalLink,
-  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 
 export function Footer() {
@@ -152,8 +152,8 @@ export function Footer() {
             &copy; {new Date().getFullYear()} SD Negeri Harapan Bangsa. Hak Cipta Dilindungi Undang-Undang.
           </p>
           <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/60">
-            <ShieldAlert className="h-3.5 w-3.5 text-amber-400" />
-            <span>Situs Demonstrasi Institusi Pendidikan Resmi Indonesia</span>
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+            <span>Situs Resmi Institusi Pendidikan Dasar Indonesia</span>
           </div>
         </div>
       </div>

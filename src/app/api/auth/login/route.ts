@@ -100,7 +100,11 @@ export async function POST(request: NextRequest) {
 
       if (!isPasswordValid) {
         return NextResponse.json(
-          { success: false, message: "Email atau kata sandi salah." },
+          {
+            success: false,
+            message:
+              "Email atau kata sandi tidak sesuai. Pastikan akun Admin, Guru, atau Staf Anda telah aktif dan terdaftar.",
+          },
           { status: 401 }
         );
       }
@@ -119,13 +123,17 @@ export async function POST(request: NextRequest) {
       if (isEmailMatch && isPasswordMatch) {
         user = {
           id: "admin-default-id",
-          name: "Administrator Utama (Demo)",
+          name: "Administrator Utama",
           email: defaultEmail,
           role: "SUPER_ADMIN",
         };
       } else {
         return NextResponse.json(
-          { success: false, message: "Email atau kata sandi salah. Gunakan kredensial resmi sekolah." },
+          {
+            success: false,
+            message:
+              "Email atau kata sandi salah. Akses dibatasi hanya untuk Administrator, Guru, dan Staf sekolah yang berwenang.",
+          },
           { status: 401 }
         );
       }
