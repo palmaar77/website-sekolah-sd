@@ -234,11 +234,10 @@ export default async function HomePage() {
               </div>
             </div>
             <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                ppdbSetting.isOpen
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-slate-100 text-slate-600 border-slate-200"
-              }`}
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${ppdbSetting.isOpen
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-slate-100 text-slate-600 border-slate-200"
+                }`}
             >
               {ppdbSetting.isOpen ? "Layanan Aktif" : "Info Terkini"}
             </span>
@@ -731,9 +730,8 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/10 text-slate-900 text-xs font-bold">
             <span
-              className={`w-2 h-2 rounded-full ${
-                ppdbSetting.isOpen ? "bg-emerald-600 animate-pulse" : "bg-rose-600"
-              }`}
+              className={`w-2 h-2 rounded-full ${ppdbSetting.isOpen ? "bg-emerald-600 animate-pulse" : "bg-rose-600"
+                }`}
             />
             <span>
               {ppdbSetting.isOpen

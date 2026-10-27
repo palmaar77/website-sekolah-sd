@@ -106,4 +106,15 @@ describe("Validasi Formulir (Zod Schemas)", () => {
     const result = contactMessageSchema.safeParse(humanMessage);
     assert.equal(result.success, true);
   });
+
+  it("harus meloloskan formulir kontak tanpa subjek", () => {
+    const messageWithoutSubject = {
+      name: "Ibu Rahma",
+      email: "rahma@gmail.com",
+      message: "Selamat pagi, saya ingin menanyakan jadwal pendaftaran PPDB.",
+      honeypot: "",
+    };
+    const result = contactMessageSchema.safeParse(messageWithoutSubject);
+    assert.equal(result.success, true);
+  });
 });

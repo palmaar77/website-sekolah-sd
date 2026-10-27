@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         phone: phone ? phone.trim() : null,
-        subject: subject.trim(),
+        subject: subject?.trim() || "Pertanyaan / Pesan Umum",
         message: message.trim(),
         ipAddress: ip,
       },

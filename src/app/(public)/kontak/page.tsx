@@ -21,7 +21,6 @@ export default function KontakPage() {
   const [name, setName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
-  const [subject, setSubject] = React.useState("");
   const [message, setMessage] = React.useState("");
   const [honeypot, setHoneypot] = React.useState(""); // Spam trap for bots
 
@@ -49,7 +48,6 @@ export default function KontakPage() {
           name,
           email,
           phone: phone || null,
-          subject,
           message,
           honeypot,
         }),
@@ -61,7 +59,6 @@ export default function KontakPage() {
         setName("");
         setEmail("");
         setPhone("");
-        setSubject("");
         setMessage("");
       } else {
         setErrorMsg(data.message || "Gagal mengirim pesan.");
@@ -221,22 +218,13 @@ export default function KontakPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Input
-                    label="Nomor WhatsApp / Telepon"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="081234567890"
-                  />
-                  <Input
-                    label="Topik / Subjek Pesan"
-                    required
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="Contoh: Tanya Kuota PPDB Zonasi"
-                  />
-                </div>
+                <Input
+                  label="Nomor WhatsApp / Telepon"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="081234567890"
+                />
 
                 <Textarea
                   label="Isi Pesan / Pertanyaan"
