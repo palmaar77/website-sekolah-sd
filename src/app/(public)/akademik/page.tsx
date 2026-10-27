@@ -21,6 +21,8 @@ export const metadata = {
 };
 
 
+export const dynamic = "force-dynamic";
+
 export default async function AkademikPage() {
   let calendars: any[] = [];
   let extracurriculars: any[] = [];
@@ -43,8 +45,21 @@ export default async function AkademikPage() {
     // Graceful fallback
   }
 
-  const ganjilEvents = calendars.filter((c) => c.semester === "Ganjil");
-  const genapEvents = calendars.filter((c) => c.semester === "Genap");
+  const ganjilEvents = calendars.filter(
+    (c) =>
+      c.semester?.toLowerCase().includes("ganjil") ||
+      c.semester === "1" ||
+      c.semester?.toLowerCase().includes("1")
+  );
+  const genapEvents = calendars.filter(
+    (c) =>
+      c.semester?.toLowerCase().includes("genap") ||
+      c.semester === "2" ||
+      c.semester?.toLowerCase().includes("2")
+  );
+  const otherEvents = calendars.filter(
+    (c) => !ganjilEvents.includes(c) && !genapEvents.includes(c)
+  );
 
   return (
     <div className="space-y-16 pb-24">
@@ -142,7 +157,7 @@ export default async function AkademikPage() {
                   <span>Semester Ganjil</span>
                 </h3>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
-                  Tahun Ajaran 2025/2026
+                  TA {ganjilEvents[0]?.academicYear || "2025/2026"}
                 </span>
               </div>
 
@@ -160,6 +175,7 @@ export default async function AkademikPage() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-slate-900">
                           {formatDateIndo(item.eventDate)}
+                          {item.endDate && ` - ${formatDateIndo(item.endDate)}`}
                         </span>
                         {item.isHoliday ? (
                           <Badge variant="danger">Libur</Badge>
@@ -187,7 +203,7 @@ export default async function AkademikPage() {
                   <span>Semester Genap</span>
                 </h3>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                  Tahun Ajaran 2025/2026
+                  TA {genapEvents[0]?.academicYear || "2025/2026"}
                 </span>
               </div>
 
@@ -207,6 +223,7 @@ export default async function AkademikPage() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-bold text-slate-900">
                           {formatDateIndo(item.eventDate)}
+                          {item.endDate && ` - ${formatDateIndo(item.endDate)}`}
                         </span>
                         {item.isHoliday ? (
                           <Badge variant="danger">Libur</Badge>
@@ -225,6 +242,45 @@ export default async function AkademikPage() {
                 </div>
               )}
             </Card>
+
+            {otherEvents.length > 0 && (
+              <Card className="p-6 lg:col-span-2">
+                <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                  <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5 text-purple-600" />
+                    <span>Agenda Lainnya</span>
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {otherEvents.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        item.isHoliday ? "bg-rose-50/40 border-rose-100" : "bg-slate-50 border-slate-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-slate-900">
+                          {formatDateIndo(item.eventDate)}
+                          {item.endDate && ` - ${formatDateIndo(item.endDate)}`}
+                        </span>
+                        {item.isHoliday ? (
+                          <Badge variant="danger">Libur</Badge>
+                        ) : (
+                          <Badge variant="info">Kegiatan</Badge>
+                        )}
+                      </div>
+                      <h4 className="font-bold text-sm text-slate-900 mt-1">{item.eventName}</h4>
+                      {item.description && (
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         </section>
 

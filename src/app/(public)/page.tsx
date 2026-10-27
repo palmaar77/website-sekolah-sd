@@ -33,12 +33,15 @@ import {
   getGalleries,
 } from "@/lib/storage/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   let profile: any = null;
   let latestNews: any[] = [];
   let announcements: any[] = [];
   let featuredGalleries: any[] = [];
   let ekskuls: any[] = [];
+  let calendars: any[] = [];
 
   // Ambil pengaturan PPDB nyata dari persistent storage
   const ppdbSetting = getPPDBSetting();
@@ -51,7 +54,7 @@ export default async function HomePage() {
       profile = await prisma.schoolProfile.findFirst();
     }
 
-    [latestNews, announcements, featuredGalleries, ekskuls] = await Promise.all([
+    [latestNews, announcements, featuredGalleries, ekskuls, calendars] = await Promise.all([
       prisma.news.findMany({
         where: { status: "PUBLISHED" },
         orderBy: { publishedAt: "desc" },
@@ -69,6 +72,10 @@ export default async function HomePage() {
       }),
       prisma.extracurricular.findMany({
         where: { isActive: true },
+        take: 4,
+      }),
+      prisma.academicCalendar.findMany({
+        orderBy: { eventDate: "asc" },
         take: 4,
       }),
     ]);
@@ -618,6 +625,89 @@ export default async function HomePage() {
               </article>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* 5.5 KALENDER & AGENDA AKADEMIK TERKINI */}
+      <section className="py-20 bg-white border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                Jadwal & Agenda Sekolah
+              </span>
+              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-2">
+                Kalender Akademik Terkini
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">
+                Jadwal kegiatan pembelajaran, asesmen sumatif, agenda kesiswaan, dan hari libur resmi.
+              </p>
+            </div>
+            <Link
+              href="/akademik#kalender"
+              className="inline-flex items-center gap-1.5 text-blue-600 font-bold text-sm hover:underline"
+            >
+              <span>Buka Kalender Lengkap</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          {calendars.length === 0 ? (
+            <div className="p-12 text-center bg-slate-50 rounded-3xl border border-slate-100 text-slate-400 text-sm">
+              <Calendar className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+              <span>Belum ada agenda kalender akademik yang dijadwalkan.</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {calendars.map((c) => (
+                <div
+                  key={c.id}
+                  className={`p-6 rounded-3xl border transition-all hover:shadow-lg flex flex-col justify-between ${
+                    c.isHoliday
+                      ? "bg-rose-50/40 border-rose-100 hover:border-rose-200"
+                      : "bg-slate-50/70 border-slate-200/70 hover:border-blue-200 hover:bg-white"
+                  }`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-blue-700 bg-blue-100/60 px-2.5 py-1 rounded-lg">
+                        Semester {c.semester}
+                      </span>
+                      {c.isHoliday ? (
+                        <Badge variant="danger">Libur Resmi</Badge>
+                      ) : (
+                        <Badge variant="info">Kegiatan</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                      <Calendar className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <span>
+                        {formatDateIndo(c.eventDate)}
+                        {c.endDate && ` - ${formatDateIndo(c.endDate)}`}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">
+                      {c.eventName}
+                    </h3>
+                    {c.description && (
+                      <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
+                        {c.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                    <span>TA {c.academicYear}</span>
+                    <Link
+                      href="/akademik#kalender"
+                      className="text-blue-600 font-semibold flex items-center gap-0.5 hover:underline"
+                    >
+                      Detail <ChevronRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

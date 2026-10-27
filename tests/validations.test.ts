@@ -5,6 +5,7 @@ import { loginSchema } from "../src/lib/validations/auth.ts";
 import { newsSchema } from "../src/lib/validations/news.ts";
 import { contactMessageSchema } from "../src/lib/validations/contact.ts";
 import { schoolProfileSchema } from "../src/lib/validations/profile.ts";
+import { calendarSchema } from "../src/lib/validations/academic.ts";
 
 describe("Validasi Formulir (Zod Schemas)", () => {
   it("harus meloloskan data pendaftaran PPDB yang valid", () => {
@@ -165,6 +166,32 @@ describe("Validasi Formulir (Zod Schemas)", () => {
       history: "Sejarah sekolah",
     };
     const result = schoolProfileSchema.safeParse(invalidProfile);
+    assert.equal(result.success, false);
+  });
+
+  it("harus meloloskan agenda kalender akademik yang valid", () => {
+    const validCalendar = {
+      semester: "Ganjil",
+      academicYear: "2025/2026",
+      eventDate: "2025-08-17",
+      endDate: null,
+      eventName: "Upacara HUT RI ke-80",
+      description: "Upacara peringatan kemerdekaan",
+      isHoliday: true,
+    };
+    const result = calendarSchema.safeParse(validCalendar);
+    assert.equal(result.success, true);
+  });
+
+  it("harus menolak agenda kalender akademik jika eventName kosong", () => {
+    const invalidCalendar = {
+      semester: "Ganjil",
+      academicYear: "2025/2026",
+      eventDate: "2025-08-17",
+      eventName: "   ",
+      isHoliday: false,
+    };
+    const result = calendarSchema.safeParse(invalidCalendar);
     assert.equal(result.success, false);
   });
 });
