@@ -4,6 +4,7 @@ import { ppdbRegistrationSchema, checkPPDBStatusSchema } from "../src/lib/valida
 import { loginSchema } from "../src/lib/validations/auth.ts";
 import { newsSchema } from "../src/lib/validations/news.ts";
 import { contactMessageSchema } from "../src/lib/validations/contact.ts";
+import { schoolProfileSchema } from "../src/lib/validations/profile.ts";
 
 describe("Validasi Formulir (Zod Schemas)", () => {
   it("harus meloloskan data pendaftaran PPDB yang valid", () => {
@@ -116,5 +117,54 @@ describe("Validasi Formulir (Zod Schemas)", () => {
     };
     const result = contactMessageSchema.safeParse(messageWithoutSubject);
     assert.equal(result.success, true);
+  });
+
+  it("harus meloloskan pembaruan profil sekolah yang valid dan mengisi default hero", () => {
+    const profileData = {
+      schoolName: "SD Negeri Harapan Bangsa",
+      npsn: "20109999",
+      accreditation: "A",
+      address: "Jl. Pendidikan No. 45",
+      city: "Kota Contoh",
+      province: "Provinsi Contoh",
+      phone: "0215550199",
+      email: "info@sdharapanbangsa.sch.id",
+      principalName: "Dra. Hj. Siti Rahmawati",
+      principalMessage: "Selamat datang di website kami.",
+      vision: "Terwujudnya siswa beriman dan cerdas.",
+      mission: "1. Menumbuhkan iman.",
+      goals: "1. Berprestasi nasional.",
+      history: "Didirikan tahun 1990.",
+      studentCount: 500,
+      teacherCount: 30,
+      classroomCount: 20,
+    };
+    const result = schoolProfileSchema.safeParse(profileData);
+    assert.equal(result.success, true);
+    if (result.success) {
+      assert.equal(result.data.heroHeadline, "Membentuk Generasi Cerdas, Berakhlak Mulia & Ceria");
+      assert.equal(result.data.extracurricularCount, 12);
+    }
+  });
+
+  it("harus menolak pembaruan profil sekolah jika email tidak valid", () => {
+    const invalidProfile = {
+      schoolName: "SD Negeri Harapan Bangsa",
+      npsn: "20109999",
+      accreditation: "A",
+      address: "Jl. Pendidikan No. 45",
+      city: "Kota Contoh",
+      province: "Provinsi Contoh",
+      phone: "0215550199",
+      email: "bukan-email",
+      principalName: "Dra. Hj. Siti Rahmawati",
+      principalMessage: "Selamat datang di website kami.",
+      vision: "Visi sekolah",
+      mission: "Misi sekolah",
+      goals: "Tujuan sekolah",
+      history: "Sejarah sekolah",
+    };
+    const result = schoolProfileSchema.safeParse(invalidProfile);
+    assert.equal(result.success, false);
   });
 });

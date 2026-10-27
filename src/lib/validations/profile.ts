@@ -1,30 +1,42 @@
 import { z } from "zod";
 
 export const schoolProfileSchema = z.object({
-  schoolName: z.string().min(3, "Nama sekolah minimal 3 karakter"),
-  npsn: z.string().min(5, "NPSN wajib diisi"),
-  accreditation: z.string().min(1, "Akreditasi wajib diisi"),
-  address: z.string().min(5, "Alamat wajib diisi"),
-  city: z.string().min(2, "Kota/Kabupaten wajib diisi"),
-  province: z.string().min(2, "Provinsi wajib diisi"),
+  schoolName: z.string().trim().min(1, "Nama sekolah wajib diisi"),
+  npsn: z.string().trim().min(1, "NPSN wajib diisi"),
+  accreditation: z.string().trim().min(1, "Akreditasi wajib diisi"),
+  address: z.string().trim().min(1, "Alamat wajib diisi"),
+  city: z.string().trim().min(1, "Kota/Kabupaten wajib diisi"),
+  province: z.string().trim().min(1, "Provinsi wajib diisi"),
   postalCode: z.string().optional().nullable(),
-  phone: z.string().min(6, "Nomor telepon wajib diisi"),
-  email: z.string().email("Format email sekolah tidak valid"),
+  phone: z.string().trim().min(1, "Nomor telepon wajib diisi"),
+  email: z.string().trim().email("Format email sekolah tidak valid"),
   whatsapp: z.string().optional().nullable(),
-  principalName: z.string().min(3, "Nama Kepala Sekolah wajib diisi"),
+  principalName: z.string().trim().min(1, "Nama Kepala Sekolah wajib diisi"),
   principalNip: z.string().optional().nullable(),
-  principalMessage: z.string().min(20, "Sambutan Kepala Sekolah minimal 20 karakter"),
+  principalMessage: z.string().trim().min(1, "Sambutan Kepala Sekolah wajib diisi"),
   principalPhoto: z.string().optional().nullable(),
-  vision: z.string().min(10, "Visi sekolah minimal 10 karakter"),
-  mission: z.string().min(10, "Misi sekolah minimal 10 karakter"),
-  goals: z.string().min(10, "Tujuan sekolah minimal 10 karakter"),
-  history: z.string().min(20, "Sejarah sekolah minimal 20 karakter"),
-  heroHeadline: z.string().min(5, "Headline hero minimal 5 karakter"),
-  heroSubheadline: z.string().min(10, "Subheadline hero minimal 10 karakter"),
-  studentCount: z.coerce.number().min(0),
-  teacherCount: z.coerce.number().min(0),
-  classroomCount: z.coerce.number().min(0),
-  extracurricularCount: z.coerce.number().min(0),
+  vision: z.string().trim().min(1, "Visi sekolah wajib diisi"),
+  mission: z.string().trim().min(1, "Misi sekolah wajib diisi"),
+  goals: z.string().trim().min(1, "Tujuan sekolah wajib diisi"),
+  history: z.string().trim().min(1, "Sejarah sekolah wajib diisi"),
+  heroHeadline: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val && val.trim().length > 0 ? val.trim() : "Membentuk Generasi Cerdas, Berakhlak Mulia & Ceria")),
+  heroSubheadline: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) =>
+      val && val.trim().length > 0
+        ? val.trim()
+        : "Sekolah Dasar berprestasi dengan fasilitas pembelajaran ramah anak, guru berpengalaman, dan lingkungan kondusif untuk menumbuhkan karakter profil Pelajar Pancasila."
+    ),
+  studentCount: z.coerce.number().min(0).default(480),
+  teacherCount: z.coerce.number().min(0).default(28),
+  classroomCount: z.coerce.number().min(0).default(18),
+  extracurricularCount: z.coerce.number().min(0).default(12),
   mapEmbedUrl: z.string().optional().nullable(),
   facebookUrl: z.string().optional().nullable(),
   instagramUrl: z.string().optional().nullable(),
@@ -34,8 +46,8 @@ export const schoolProfileSchema = z.object({
 export type SchoolProfileInput = z.infer<typeof schoolProfileSchema>;
 
 export const facilitySchema = z.object({
-  name: z.string().min(3, "Nama fasilitas minimal 3 karakter"),
-  description: z.string().min(5, "Deskripsi fasilitas minimal 5 karakter"),
+  name: z.string().trim().min(1, "Nama fasilitas wajib diisi"),
+  description: z.string().trim().min(1, "Deskripsi fasilitas wajib diisi"),
   imageUrl: z.string().optional().nullable(),
   iconName: z.string().optional().nullable(),
   order: z.coerce.number().default(0),

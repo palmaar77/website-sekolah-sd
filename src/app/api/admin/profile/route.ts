@@ -17,7 +17,10 @@ export async function GET() {
     return NextResponse.json({ success: true, data: profile });
   } catch (error) {
     console.error("Get profile error:", error);
-    return NextResponse.json({ success: false, message: "Gagal mengambil data profil sekolah" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Gagal mengambil data profil sekolah" },
+      { status: 500 }
+    );
   }
 }
 
@@ -29,17 +32,30 @@ export async function PUT(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
+        {
+          success: false,
+          message: "Validasi data profil gagal",
+          errors: parsed.error.flatten().fieldErrors,
+        },
         { status: 400 }
       );
     }
 
     const data = parsed.data;
+
+    // Cari profil yang sudah ada untuk memperbarui ID yang tepat
+    const existing =
+      (await prisma.schoolProfile.findUnique({
+        where: { id: "default-profile" },
+      })) || (await prisma.schoolProfile.findFirst());
+
+    const profileId = existing ? existing.id : "default-profile";
+
     const updated = await prisma.schoolProfile.upsert({
-      where: { id: "default-profile" },
+      where: { id: profileId },
       update: data,
       create: {
-        id: "default-profile",
+        id: profileId,
         ...data,
       },
     });
@@ -55,9 +71,18 @@ export async function PUT(request: NextRequest) {
   } catch (error: unknown) {
     const err = error as Error;
     if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Akses ditolak. Silakan login kembali." },
+        { status: 401 }
+      );
     }
     console.error("Update profile error:", error);
-    return NextResponse.json({ success: false, message: "Gagal memperbarui profil sekolah" }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        message: err.message || "Gagal memperbarui profil sekolah",
+      },
+      { status: 500 }
+    );
   }
 }
