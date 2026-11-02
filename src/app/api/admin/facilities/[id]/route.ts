@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { facilitySchema } from "@/lib/validations/profile";
 import { logActivity } from "@/lib/audit";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiNotFound, apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function PUT(
   request: NextRequest,
@@ -15,15 +17,18 @@ export async function PUT(
     const parsed = facilitySchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
+
+    const cleanData = {
+      ...parsed.data,
+      name: sanitizeInput(parsed.data.name),
+      description: sanitizeInput(parsed.data.description),
+    };
 
     const updated = await prisma.facility.update({
       where: { id },
-      data: parsed.data,
+      data: cleanData,
     });
 
     await logActivity({
@@ -33,13 +38,9 @@ export async function PUT(
       details: `Memperbarui fasilitas: "${updated.name}"`,
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    return apiSuccess(updated);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal memperbarui fasilitas" }, { status: 500 });
+    return handleApiError(error, "Gagal memperbarui fasilitas");
   }
 }
 
@@ -53,7 +54,7 @@ export async function DELETE(
     const existing = await prisma.facility.findUnique({ where: { id } });
 
     if (!existing) {
-      return NextResponse.json({ success: false, message: "Fasilitas tidak ditemukan" }, { status: 404 });
+      return apiNotFound("Fasilitas tidak ditemukan");
     }
 
     await prisma.facility.delete({ where: { id } });
@@ -65,12 +66,8 @@ export async function DELETE(
       details: `Menghapus fasilitas: "${existing.name}"`,
     });
 
-    return NextResponse.json({ success: true, message: "Fasilitas berhasil dihapus" });
+    return apiSuccess({ message: "Fasilitas berhasil dihapus" });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal menghapus fasilitas" }, { status: 500 });
+    return handleApiError(error, "Gagal menghapus fasilitas");
   }
 }

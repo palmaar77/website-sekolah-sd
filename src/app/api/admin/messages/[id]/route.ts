@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
+import { apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function PATCH(
   request: NextRequest,
@@ -19,13 +20,9 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    return apiSuccess(updated);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal memperbarui status pesan" }, { status: 500 });
+    return handleApiError(error, "Gagal memperbarui status pesan");
   }
 }
 
@@ -37,12 +34,8 @@ export async function DELETE(
     await requireAuth();
     const { id } = await params;
     await prisma.contactMessage.delete({ where: { id } });
-    return NextResponse.json({ success: true, message: "Pesan berhasil dihapus" });
+    return apiSuccess({ message: "Pesan berhasil dihapus" });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal menghapus pesan" }, { status: 500 });
+    return handleApiError(error, "Gagal menghapus pesan");
   }
 }

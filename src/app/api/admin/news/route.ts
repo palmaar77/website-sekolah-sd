@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { newsSchema } from "@/lib/validations/news";
 import { logActivity } from "@/lib/audit";
 import { getAllNews, createNews } from "@/lib/storage/db";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiCreated, apiSuccess, handleApiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -16,13 +18,9 @@ export async function GET(request: NextRequest) {
     // Ambil data dari persistent storage
     const news = getAllNews({ q, category, status });
 
-    return NextResponse.json({ success: true, data: news });
+    return apiSuccess(news);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal mengambil data berita" }, { status: 500 });
+    return handleApiError(error, "Gagal mengambil data berita");
   }
 }
 
@@ -33,19 +31,21 @@ export async function POST(request: NextRequest) {
     const parsed = newsSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
 
     const data = parsed.data;
 
+    // Sanitasi input teks berita (OWASP A03: XSS Prevention)
+    const cleanTitle = sanitizeInput(data.title);
+    const cleanExcerpt = sanitizeInput(data.excerpt);
+    const cleanContent = sanitizeInput(data.content);
+
     // 1. Simpan ke sistem penyimpanan nyata
     const item = createNews({
-      title: data.title,
-      excerpt: data.excerpt,
-      content: data.content,
+      title: cleanTitle,
+      excerpt: cleanExcerpt,
+      content: cleanContent,
       coverImage: data.coverImage || null,
       category: data.category,
       status: data.status,
@@ -80,13 +80,8 @@ export async function POST(request: NextRequest) {
       });
     } catch {}
 
-    return NextResponse.json({ success: true, data: item });
+    return apiCreated(item, "Berita berhasil dibuat.");
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Create news error:", error);
-    return NextResponse.json({ success: false, message: "Gagal membuat berita" }, { status: 500 });
+    return handleApiError(error, "Gagal membuat berita");
   }
 }

@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { newsSchema } from "@/lib/validations/news";
 import { logActivity } from "@/lib/audit";
 import { getNewsById, updateNews, deleteNews } from "@/lib/storage/db";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiNotFound, apiSuccess, handleApiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 
 export async function GET(
@@ -21,16 +23,12 @@ export async function GET(
     }
 
     if (!item) {
-      return NextResponse.json({ success: false, message: "Berita tidak ditemukan" }, { status: 404 });
+      return apiNotFound("Berita tidak ditemukan");
     }
 
-    return NextResponse.json({ success: true, data: item });
+    return apiSuccess(item);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Kesalahan server" }, { status: 500 });
+    return handleApiError(error, "Kesalahan server saat mengambil berita");
   }
 }
 
@@ -45,20 +43,22 @@ export async function PUT(
     const parsed = newsSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
 
     const data = parsed.data;
 
+    // Sanitasi input teks berita (OWASP A03: XSS Prevention)
+    const cleanTitle = sanitizeInput(data.title);
+    const cleanExcerpt = sanitizeInput(data.excerpt);
+    const cleanContent = sanitizeInput(data.content);
+
     let updated;
     try {
       updated = updateNews(id, {
-        title: data.title,
-        excerpt: data.excerpt,
-        content: data.content,
+        title: cleanTitle,
+        excerpt: cleanExcerpt,
+        content: cleanContent,
         coverImage: data.coverImage || null,
         category: data.category,
         status: data.status,
@@ -72,9 +72,9 @@ export async function PUT(
       await prisma.news.update({
         where: { id },
         data: {
-          title: data.title,
-          excerpt: data.excerpt,
-          content: data.content,
+          title: cleanTitle,
+          excerpt: cleanExcerpt,
+          content: cleanContent,
           coverImage: data.coverImage || null,
           category: data.category,
           status: data.status,
@@ -88,18 +88,13 @@ export async function PUT(
         adminId: session.userId,
         adminName: session.name,
         action: "UPDATE_NEWS",
-        details: `Memperbarui berita: "${data.title}"`,
+        details: `Memperbarui berita: "${cleanTitle}"`,
       });
     } catch {}
 
-    return NextResponse.json({ success: true, data: updated });
+    return apiSuccess(updated);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Update news error:", error);
-    return NextResponse.json({ success: false, message: "Gagal memperbarui berita" }, { status: 500 });
+    return handleApiError(error, "Gagal memperbarui berita");
   }
 }
 
@@ -126,16 +121,10 @@ export async function DELETE(
       });
     } catch {}
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       message: deleted ? "Berita berhasil dihapus dari sistem" : "Berita telah dihapus",
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Delete news error:", error);
-    return NextResponse.json({ success: false, message: "Gagal menghapus berita" }, { status: 500 });
+    return handleApiError(error, "Gagal menghapus berita");
   }
 }

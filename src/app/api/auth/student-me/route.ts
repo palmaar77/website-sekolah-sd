@@ -1,23 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
 import { STUDENT_COOKIE_NAME, verifyStudentSessionToken } from "@/lib/auth/jwt";
+import { apiSuccess, apiUnauthorized, handleApiError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get(STUDENT_COOKIE_NAME)?.value;
     if (!token) {
-      return NextResponse.json(
-        { success: false, message: "Sesi portal siswa tidak ditemukan." },
-        { status: 401 }
-      );
+      return apiUnauthorized("Sesi portal siswa tidak ditemukan.");
     }
 
     const payload = await verifyStudentSessionToken(token);
     if (!payload || payload.role !== "STUDENT") {
-      return NextResponse.json(
-        { success: false, message: "Sesi portal siswa tidak valid atau telah berakhir." },
-        { status: 401 }
-      );
+      return apiUnauthorized("Sesi portal siswa tidak valid atau telah berakhir.");
     }
 
     let registration = null;
@@ -54,15 +49,8 @@ export async function GET(request: NextRequest) {
       } as any;
     }
 
-    return NextResponse.json({
-      success: true,
-      data: registration,
-    });
+    return apiSuccess(registration);
   } catch (error) {
-    console.error("Student me error:", error);
-    return NextResponse.json(
-      { success: false, message: "Terjadi kesalahan sistem saat mengambil data siswa." },
-      { status: 500 }
-    );
+    return handleApiError(error, "Terjadi kesalahan sistem saat mengambil data siswa.");
   }
 }

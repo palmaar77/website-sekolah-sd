@@ -1,7 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { assertStudentOwnership } from "@/lib/auth/rbac";
 import { getStudentReport } from "@/lib/services/grades";
+import {
+  apiForbidden,
+  apiSuccess,
+  apiUnauthorized,
+  handleApiError,
+} from "@/lib/api-response";
 
 /**
  * GET /api/siswa/nilai
@@ -13,14 +19,7 @@ export async function GET(request: NextRequest) {
     const current = await getCurrentSession();
 
     if (!current) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "UNAUTHORIZED",
-          message: "Sesi portal siswa tidak ditemukan. Silakan masuk terlebih dahulu.",
-        },
-        { status: 401 }
-      );
+      return apiUnauthorized("Sesi portal siswa tidak ditemukan. Silakan masuk terlebih dahulu.");
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -33,22 +32,14 @@ export async function GET(request: NextRequest) {
       targetReg = current.session.registrationNumber;
       targetName = current.session.fullName;
 
-      // Jika siswa mencoba menyematkan query param milik siswa lain di URL
+      // Jika siswa mencoba menyematkan query param milik siswa lain di URL (OWASP A01: IDOR)
       if (requestedReg && requestedReg.trim().toUpperCase() !== targetReg.toUpperCase()) {
         try {
           assertStudentOwnership(current.session, requestedReg);
         } catch (err: any) {
-          return NextResponse.json(
-            {
-              success: false,
-              code: err.code || "IDOR_FORBIDDEN",
-              message:
-                err.message ||
-                "Akses ditolak: Anda tidak memiliki wewenang untuk membaca nilai siswa lain.",
-              attemptedId: requestedReg,
-              authenticatedId: targetReg,
-            },
-            { status: 403 }
+          return apiForbidden(
+            err.message || "Akses ditolak: Anda tidak memiliki wewenang untuk membaca nilai siswa lain.",
+            err.code || "IDOR_FORBIDDEN"
           );
         }
       }
@@ -60,20 +51,10 @@ export async function GET(request: NextRequest) {
 
     const report = await getStudentReport(targetReg, targetName);
 
-    return NextResponse.json({
-      success: true,
-      data: report,
+    return apiSuccess(report, {
       userRole: current.session.role,
     });
-  } catch (error: any) {
-    console.error("API /api/siswa/nilai error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        code: "SERVER_ERROR",
-        message: "Terjadi kesalahan saat memuat nilai siswa.",
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleApiError(error, "Terjadi kesalahan saat memuat nilai siswa.");
   }
 }

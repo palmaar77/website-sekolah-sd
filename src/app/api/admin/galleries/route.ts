@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { galleryItemSchema } from "@/lib/validations/gallery";
@@ -8,14 +8,16 @@ import {
   getGalleryCategories,
   createGallery,
 } from "@/lib/storage/db";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiCreated, apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
     const category = request.nextUrl.searchParams.get("category");
 
     // Ambil data kategori dan item galeri dari persistent storage
-    let categories = getGalleryCategories();
-    let rawItems = getGalleries(category || undefined);
+    const categories = getGalleryCategories();
+    const rawItems = getGalleries(category || undefined);
 
     // Coba query prisma secara background / non-blocking jika database PostgreSQL aktif
     try {
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
               },
             })),
         ];
-        return NextResponse.json({ success: true, data: mergedItems, categories });
+        return apiSuccess(mergedItems, { categories });
       }
     } catch {
       // Abaikan bila PostgreSQL offline, gunakan data dari persistent file storage
@@ -77,10 +79,9 @@ export async function GET(request: NextRequest) {
       },
     }));
 
-    return NextResponse.json({ success: true, data: items, categories });
+    return apiSuccess(items, { categories });
   } catch (error) {
-    console.error("Gallery error:", error);
-    return NextResponse.json({ success: false, message: "Gagal mengambil data galeri" }, { status: 500 });
+    return handleApiError(error, "Gagal mengambil data galeri");
   }
 }
 
@@ -91,18 +92,11 @@ export async function POST(request: NextRequest) {
     const parsed = galleryItemSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validasi gagal: judul, foto, dan kategori wajib diisi dengan benar.",
-          errors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
 
     // Pastikan kategori ada
-    let categories = getGalleryCategories();
+    const categories = getGalleryCategories();
     let cat = categories.find(
       (c) => c.id === parsed.data.categoryId || c.slug === parsed.data.categoryId
     );
@@ -112,11 +106,15 @@ export async function POST(request: NextRequest) {
 
     const finalCategoryId = cat ? cat.id : parsed.data.categoryId;
 
+    // Sanitasi judul dan deskripsi galeri (OWASP A03)
+    const cleanTitle = sanitizeInput(parsed.data.title);
+    const cleanDescription = parsed.data.description ? sanitizeInput(parsed.data.description) : null;
+
     // Simpan ke sistem penyimpanan nyata (persistent file-backed DB)
     const item = createGallery({
-      title: parsed.data.title.trim(),
+      title: cleanTitle,
       imageUrl: parsed.data.imageUrl.trim(),
-      description: parsed.data.description?.trim() || null,
+      description: cleanDescription,
       categoryId: finalCategoryId,
       isFeatured: parsed.data.isFeatured ?? true,
     });
@@ -167,17 +165,8 @@ export async function POST(request: NextRequest) {
       details: `Menambahkan foto galeri: "${item.title}"`,
     });
 
-    return NextResponse.json({
-      success: true,
-      message: "Foto galeri berhasil disimpan dan ditampilkan.",
-      data: formattedItem,
-    });
+    return apiCreated(formattedItem, "Foto galeri berhasil disimpan dan ditampilkan.");
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Gallery create error:", error);
-    return NextResponse.json({ success: false, message: "Gagal menambahkan foto galeri" }, { status: 500 });
+    return handleApiError(error, "Gagal menambahkan foto galeri");
   }
 }

@@ -1,9 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { calendarSchema, extracurricularSchema } from "@/lib/validations/academic";
 import { logActivity } from "@/lib/audit";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import {
+  apiBadRequest,
+  apiCreated,
+  apiNotFound,
+  apiSuccess,
+  handleApiError,
+} from "@/lib/api-response";
 
 export async function GET() {
   try {
@@ -19,18 +27,13 @@ export async function GET() {
       }),
     ]);
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       calendars,
       extracurriculars,
       achievements,
     });
   } catch (error) {
-    console.error("Academic GET error:", error);
-    return NextResponse.json(
-      { success: false, message: "Gagal mengambil data akademik" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Gagal mengambil data akademik");
   }
 }
 
@@ -43,24 +46,17 @@ export async function POST(request: NextRequest) {
     if (type === "calendar") {
       const parsed = calendarSchema.safeParse(body.data);
       if (!parsed.success) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Validasi kalender gagal",
-            errors: parsed.error.flatten().fieldErrors,
-          },
-          { status: 400 }
-        );
+        return handleApiError(parsed.error);
       }
 
       const item = await prisma.academicCalendar.create({
         data: {
-          semester: parsed.data.semester.trim(),
-          academicYear: parsed.data.academicYear.trim(),
+          semester: sanitizeInput(parsed.data.semester),
+          academicYear: sanitizeInput(parsed.data.academicYear),
           eventDate: new Date(parsed.data.eventDate),
           endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
-          eventName: parsed.data.eventName.trim(),
-          description: parsed.data.description ? parsed.data.description.trim() : null,
+          eventName: sanitizeInput(parsed.data.eventName),
+          description: parsed.data.description ? sanitizeInput(parsed.data.description) : null,
           isHoliday: parsed.data.isHoliday,
         },
       });
@@ -72,28 +68,28 @@ export async function POST(request: NextRequest) {
         details: `Menambahkan agenda kalender: "${item.eventName}"`,
       });
 
-      // Purge cache agar kalender baru langsung tampil di portal dan halaman akademik publik
       revalidatePath("/");
       revalidatePath("/akademik");
 
-      return NextResponse.json({ success: true, data: item });
+      return apiCreated(item, "Agenda kalender berhasil ditambahkan.");
     }
 
     if (type === "extracurricular") {
       const parsed = extracurricularSchema.safeParse(body.data);
       if (!parsed.success) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Validasi ekstrakurikuler gagal",
-            errors: parsed.error.flatten().fieldErrors,
-          },
-          { status: 400 }
-        );
+        return handleApiError(parsed.error);
       }
 
+      const cleanData = {
+        ...parsed.data,
+        name: sanitizeInput(parsed.data.name),
+        description: sanitizeInput(parsed.data.description),
+        coach: parsed.data.coach ? sanitizeInput(parsed.data.coach) : null,
+        schedule: parsed.data.schedule ? sanitizeInput(parsed.data.schedule) : null,
+      };
+
       const item = await prisma.extracurricular.create({
-        data: parsed.data,
+        data: cleanData,
       });
 
       await logActivity({
@@ -106,20 +102,12 @@ export async function POST(request: NextRequest) {
       revalidatePath("/");
       revalidatePath("/akademik");
 
-      return NextResponse.json({ success: true, data: item });
+      return apiCreated(item, "Ekstrakurikuler berhasil ditambahkan.");
     }
 
-    return NextResponse.json({ success: false, message: "Tipe tidak valid" }, { status: 400 });
+    return apiBadRequest("Tipe data tidak valid. Harus 'calendar' atau 'extracurricular'.");
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Academic POST error:", error);
-    return NextResponse.json(
-      { success: false, message: err.message || "Gagal menyimpan data" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Gagal menyimpan data akademik");
   }
 }
 
@@ -131,19 +119,13 @@ export async function DELETE(request: NextRequest) {
     const type = searchParams.get("type"); // "calendar" | "extracurricular"
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, message: "ID wajib disertakan" },
-        { status: 400 }
-      );
+      return apiBadRequest("ID wajib disertakan.");
     }
 
     if (type === "calendar") {
       const existing = await prisma.academicCalendar.findUnique({ where: { id } });
       if (!existing) {
-        return NextResponse.json(
-          { success: false, message: "Agenda tidak ditemukan" },
-          { status: 404 }
-        );
+        return apiNotFound("Agenda tidak ditemukan.");
       }
 
       await prisma.academicCalendar.delete({ where: { id } });
@@ -158,16 +140,13 @@ export async function DELETE(request: NextRequest) {
       revalidatePath("/");
       revalidatePath("/akademik");
 
-      return NextResponse.json({ success: true, message: "Agenda berhasil dihapus" });
+      return apiSuccess({ message: "Agenda berhasil dihapus." });
     }
 
     if (type === "extracurricular") {
       const existing = await prisma.extracurricular.findUnique({ where: { id } });
       if (!existing) {
-        return NextResponse.json(
-          { success: false, message: "Ekstrakurikuler tidak ditemukan" },
-          { status: 404 }
-        );
+        return apiNotFound("Ekstrakurikuler tidak ditemukan.");
       }
 
       await prisma.extracurricular.delete({ where: { id } });
@@ -182,19 +161,11 @@ export async function DELETE(request: NextRequest) {
       revalidatePath("/");
       revalidatePath("/akademik");
 
-      return NextResponse.json({ success: true, message: "Ekstrakurikuler berhasil dihapus" });
+      return apiSuccess({ message: "Ekstrakurikuler berhasil dihapus." });
     }
 
-    return NextResponse.json({ success: false, message: "Tipe tidak valid" }, { status: 400 });
+    return apiBadRequest("Tipe tidak valid. Harus 'calendar' atau 'extracurricular'.");
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Academic DELETE error:", error);
-    return NextResponse.json(
-      { success: false, message: err.message || "Gagal menghapus data" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Gagal menghapus data akademik");
   }
 }

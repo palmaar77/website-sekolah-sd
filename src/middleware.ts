@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { applySecurityHeaders } from "@/lib/security/headers";
+import { validateSameOrigin } from "@/lib/security/csrf";
 
 const AUTH_COOKIE_NAME = "sd_admin_session";
 const STUDENT_COOKIE_NAME = "sd_student_session";
@@ -10,7 +12,24 @@ const encodedKey = new TextEncoder().encode(JWT_SECRET);
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Area & Route Administrator
+  // 1. Validasi Proteksi CSRF & Origin pada API Mutasi (POST, PUT, PATCH, DELETE)
+  if (pathname.startsWith("/api/")) {
+    const originCheck = validateSameOrigin(request);
+    if (!originCheck.isValid) {
+      const errorResponse = NextResponse.json(
+        {
+          success: false,
+          code: "CSRF_ORIGIN_REJECTED",
+          message: originCheck.reason || "Permintaan ditolak karena tidak memenuhi kebijakan Same-Origin.",
+        },
+        { status: 403 }
+      );
+      applySecurityHeaders(errorResponse.headers);
+      return errorResponse;
+    }
+  }
+
+  // 2. Area & Route Administrator
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isAdminLoginPage = pathname === "/admin/login";
   const isAdminApiRoute = pathname.startsWith("/api/admin");
@@ -35,15 +54,19 @@ export async function middleware(request: NextRequest) {
     // Jika sudah login admin dan buka halaman login admin -> alihkan ke dashboard admin
     if (isAdminLoginPage) {
       if (isAdminAuthenticated) {
-        return NextResponse.redirect(new URL("/admin", request.url));
+        const redirectRes = NextResponse.redirect(new URL("/admin", request.url));
+        applySecurityHeaders(redirectRes.headers);
+        return redirectRes;
       }
-      return NextResponse.next();
+      const nextRes = NextResponse.next();
+      applySecurityHeaders(nextRes.headers);
+      return nextRes;
     }
 
     // Jika belum login admin dan mencoba mengakses halaman admin atau API admin
     if (!isAdminAuthenticated) {
       if (isAdminApiRoute) {
-        return NextResponse.json(
+        const unauthRes = NextResponse.json(
           {
             success: false,
             code: "UNAUTHORIZED",
@@ -51,14 +74,18 @@ export async function middleware(request: NextRequest) {
           },
           { status: 401 }
         );
+        applySecurityHeaders(unauthRes.headers);
+        return unauthRes;
       }
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(loginUrl);
+      const redirectLogin = NextResponse.redirect(loginUrl);
+      applySecurityHeaders(redirectLogin.headers);
+      return redirectLogin;
     }
   }
 
-  // 2. Area & Route Portal Siswa
+  // 3. Area & Route Portal Siswa
   const isStudentLoginPage = pathname === "/siswa/login";
   const isStudentProtectedRoute =
     pathname.startsWith("/siswa/dashboard") ||
@@ -99,15 +126,19 @@ export async function middleware(request: NextRequest) {
     // Jika sudah login siswa dan buka halaman login siswa -> alihkan ke dashboard siswa
     if (isStudentLoginPage) {
       if (isStudentAuthenticated) {
-        return NextResponse.redirect(new URL("/siswa/dashboard", request.url));
+        const redirectStudent = NextResponse.redirect(new URL("/siswa/dashboard", request.url));
+        applySecurityHeaders(redirectStudent.headers);
+        return redirectStudent;
       }
-      return NextResponse.next();
+      const nextRes = NextResponse.next();
+      applySecurityHeaders(nextRes.headers);
+      return nextRes;
     }
 
-    // Jika mengakses area siswa yang dilindungi tapi belum login (baik sebagai siswa maupun guru/admin)
+    // Jika mengakses area siswa yang dilindungi tapi belum login
     if (!isStudentAuthenticated && !isStaffAuthenticated) {
       if (isStudentApiRoute) {
-        return NextResponse.json(
+        const unauthStudentRes = NextResponse.json(
           {
             success: false,
             code: "UNAUTHORIZED",
@@ -115,29 +146,28 @@ export async function middleware(request: NextRequest) {
           },
           { status: 401 }
         );
+        applySecurityHeaders(unauthStudentRes.headers);
+        return unauthStudentRes;
       }
       const studentLoginUrl = new URL("/siswa/login", request.url);
       studentLoginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(studentLoginUrl);
+      const redirectStudentLogin = NextResponse.redirect(studentLoginUrl);
+      applySecurityHeaders(redirectStudentLogin.headers);
+      return redirectStudentLogin;
     }
   }
 
-  return NextResponse.next();
+  // Response default dengan Security Headers OWASP terpasang
+  const response = NextResponse.next();
+  applySecurityHeaders(response.headers);
+  return response;
 }
 
 export const config = {
   matcher: [
-    "/admin",
-    "/admin/:path*",
-    "/api/admin/:path*",
-    "/siswa/login",
-    "/siswa/dashboard",
-    "/siswa/dashboard/:path*",
-    "/siswa/nilai",
-    "/siswa/nilai/:path*",
-    "/siswa/profil",
-    "/siswa/profil/:path*",
-    "/siswa/data/:path*",
-    "/api/siswa/:path*",
+    /*
+     * Cocokkan semua path request kecuali berkas statis, favicon, dan _next
+     */
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

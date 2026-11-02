@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { teacherSchema } from "@/lib/validations/teacher";
 import { logActivity } from "@/lib/audit";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiCreated, apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function GET() {
   try {
@@ -37,10 +39,9 @@ export async function GET() {
         },
       ];
     }
-    return NextResponse.json({ success: true, data });
+    return apiSuccess(data);
   } catch (error) {
-    console.error("Teachers error:", error);
-    return NextResponse.json({ success: false, message: "Gagal mengambil data guru" }, { status: 500 });
+    return handleApiError(error, "Gagal mengambil data guru");
   }
 }
 
@@ -51,14 +52,20 @@ export async function POST(request: NextRequest) {
     const parsed = teacherSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
 
+    const cleanData = {
+      ...parsed.data,
+      name: sanitizeInput(parsed.data.name),
+      nip: parsed.data.nip ? parsed.data.nip.trim() : null,
+      role: sanitizeInput(parsed.data.role),
+      subject: parsed.data.subject ? sanitizeInput(parsed.data.subject) : null,
+      education: parsed.data.education ? sanitizeInput(parsed.data.education) : null,
+    };
+
     const item = await prisma.teacher.create({
-      data: parsed.data,
+      data: cleanData,
     });
 
     await logActivity({
@@ -68,12 +75,8 @@ export async function POST(request: NextRequest) {
       details: `Menambahkan guru/staf: "${item.name}"`,
     });
 
-    return NextResponse.json({ success: true, data: item });
+    return apiCreated(item, "Data guru berhasil ditambahkan.");
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal menambahkan data guru" }, { status: 500 });
+    return handleApiError(error, "Gagal menambahkan data guru");
   }
 }

@@ -4,30 +4,27 @@ import { checkPPDBStatusSchema } from "@/lib/validations/ppdb";
 import { createStudentSessionToken, STUDENT_COOKIE_NAME } from "@/lib/auth/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getPPDBRegistrationByNumber } from "@/lib/storage/db";
+import {
+  apiBadRequest,
+  apiNotFound,
+  apiUnauthorized,
+  apiTooManyRequests,
+  handleApiError,
+} from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get("x-forwarded-for") || "local-ip";
     const rateCheck = checkRateLimit(`student-login:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 });
     if (!rateCheck.success) {
-      return NextResponse.json(
-        { success: false, message: "Terlalu banyak percobaan masuk. Mohon tunggu 15 menit." },
-        { status: 429 }
-      );
+      return apiTooManyRequests("Terlalu banyak percobaan masuk. Mohon tunggu 15 menit.");
     }
 
     const body = await request.json();
     const parsed = checkPPDBStatusSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Data login tidak lengkap atau format salah.",
-          errors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
+      return apiBadRequest("Data login tidak lengkap atau format salah.", parsed.error.flatten().fieldErrors);
     }
 
     const { registrationNumber, parentPhone } = parsed.data;
@@ -39,14 +36,8 @@ export async function POST(request: NextRequest) {
       windowMs: 15 * 60 * 1000,
     });
     if (!regRateCheck.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "TOO_MANY_ATTEMPTS",
-          message:
-            "Terlalu banyak percobaan masuk untuk nomor registrasi ini. Mohon tunggu 15 menit.",
-        },
-        { status: 429 }
+      return apiTooManyRequests(
+        "Terlalu banyak percobaan masuk untuk nomor registrasi ini. Mohon tunggu 15 menit."
       );
     }
 
@@ -91,10 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!registration) {
-      return NextResponse.json(
-        { success: false, message: "Nomor registrasi siswa tidak terdaftar di sistem." },
-        { status: 404 }
-      );
+      return apiNotFound("Nomor registrasi siswa tidak terdaftar di sistem.");
     }
 
     // Verifikasi nomor HP / kontak
@@ -107,13 +95,7 @@ export async function POST(request: NextRequest) {
       phoneInputClean.endsWith(dbPhoneClean);
 
     if (!isPhoneMatch) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Nomor WhatsApp / kontak tidak sesuai dengan data registrasi.",
-        },
-        { status: 401 }
-      );
+      return apiUnauthorized("Nomor WhatsApp / kontak tidak sesuai dengan data registrasi.");
     }
 
     // Generate token
@@ -135,7 +117,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Pasang HTTP-Only Cookie
+    // Pasang HTTP-Only Secure Cookie (OWASP A07)
     response.cookies.set({
       name: STUDENT_COOKIE_NAME,
       value: token,
@@ -148,10 +130,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Student login error:", error);
-    return NextResponse.json(
-      { success: false, message: "Terjadi kesalahan sistem saat memproses login siswa." },
-      { status: 500 }
-    );
+    return handleApiError(error, "Terjadi kesalahan sistem saat memproses login siswa.");
   }
 }

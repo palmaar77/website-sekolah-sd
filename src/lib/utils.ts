@@ -52,11 +52,31 @@ export function slugify(text: string): string {
 
 /**
  * Generate nomor pendaftaran PPDB yang unik dan ramah dibaca
- * Format: PPDB-2025-XXXXX
+ * Format: PPDB-YYYY-XXXXX
+ * Menggunakan CSPRNG (Cryptographically Secure Pseudo-Random Number Generator)
+ * untuk mencegah tebakan nomor acak (OWASP A02: Cryptographic Failures)
  */
 export function generateRegistrationNumber(prefix = "PPDB"): string {
   const year = new Date().getFullYear();
-  const randomChars = Math.random().toString(36).substring(2, 7).toUpperCase();
+  let randomChars = "";
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(4);
+    crypto.getRandomValues(bytes);
+    randomChars = Array.from(bytes)
+      .map((b) => b.toString(36))
+      .join("")
+      .substring(0, 5)
+      .toUpperCase();
+  } else {
+    // Fallback yang tetap konsisten
+    randomChars = Math.random().toString(36).substring(2, 7).toUpperCase();
+  }
+
+  // Pastikan panjang tepat 5 karakter
+  if (randomChars.length < 5) {
+    randomChars = randomChars.padEnd(5, "X");
+  }
+
   return `${prefix}-${year}-${randomChars}`;
 }
 

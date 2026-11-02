@@ -77,11 +77,30 @@ npx prisma db push
 npm run seed
 ```
 
-### 3. Jalankan Pengujian Otomatis (Opsional)
+### 3. Jalankan Pengujian Otomatis
 ```bash
 npm test
 ```
-*Hasil: 13/13 unit test lolos verifikasi (validasi schema, enkripsi auth, utilitas formatting).*
+*Hasil: 51/51 unit test lolos verifikasi (14 test suites mencakup OWASP Top 10 Security Headers, XSS Sanitization, Anti-CSV Formula Injection, Masking PII, CSRF Same-Origin, RBAC Matrix, Proteksi IDOR, Storage DB, dan Validasi Zod).*
+
+---
+
+## 🔒 Standar Keamanan OWASP Top 10 & Clean Architecture
+
+Seluruh sistem telah menerapkan prinsip **Clean Architecture**, **SOLID/DRY**, serta pengamanan penuh terhadap **OWASP Top 10 Web Application Vulnerabilities**:
+- **A01: Broken Access Control**: RBAC server-side & proteksi anti-IDOR pada portal siswa dan nilai rapor.
+- **A02: Cryptographic Failures**: Bcrypt password hashing, Jose HS256 JWT sessions via HttpOnly Secure Cookies, dan CSPRNG untuk penomoran registrasi.
+- **A03: Injection & XSS**: Prisma parameterized queries, HTML string sanitization, serta proteksi Anti-CSV Formula Injection (CWE-1236).
+- **A04: Insecure Design**: Multi-tier adaptive rate limiting & proteksi honeypot anti-spam.
+- **A05: Security Misconfiguration**: HTTP Security Headers (CSP, HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff) dan penonaktifan header `X-Powered-By`.
+- **A07: Auth Failures**: Perlindungan brute force bertingkat & kebijakan kompleksitas kata sandi.
+- **A08: Data Integrity**: Whitelist ketat MIME type dan penamaan berkas UUID acak pada unggahan.
+- **A09: Security Logging**: Audit trail pencatatan aktivitas admin secara terperinci.
+- **A10: SSRF & CSRF**: Validasi Same-Origin pada seluruh endpoint mutasi HTTP.
+
+👉 *Dokumentasi arsitektur dan keamanan lengkap dapat dibaca pada berkas:* [SECURITY_AND_CLEAN_CODE.md](file:///d:/weebsite-sekolahv1/SECURITY_AND_CLEAN_CODE.md)
+
+---
 
 ### 4. Jalankan Development Server
 ```bash

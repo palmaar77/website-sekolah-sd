@@ -816,7 +816,7 @@ export function createNews(
   input: Omit<NewsItemData, "id" | "slug" | "viewCount" | "createdAt" | "updatedAt">
 ): NewsItemData {
   const db = readDb();
-  let baseSlug = slugify(input.title);
+  const baseSlug = slugify(input.title);
   let slug = baseSlug;
   let counter = 1;
   while (db.news.some((n) => n.slug === slug)) {
@@ -855,7 +855,7 @@ export function updateNews(id: string, updates: Partial<NewsItemData>): NewsItem
 
   // Update slug jika judul diubah
   if (updates.title && updates.title !== current.title && !updates.slug) {
-    let baseSlug = slugify(updates.title);
+    const baseSlug = slugify(updates.title);
     let slug = baseSlug;
     let counter = 1;
     while (db.news.some((n) => n.slug === slug && n.id !== id)) {

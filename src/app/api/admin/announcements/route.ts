@@ -1,21 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { announcementSchema } from "@/lib/validations/news";
 import { logActivity } from "@/lib/audit";
 import { getAllAnnouncements, createAnnouncement } from "@/lib/storage/db";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiCreated, apiSuccess, handleApiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
   try {
     await requireAuth(["SUPER_ADMIN", "ADMIN", "STAFF"]);
     const data = getAllAnnouncements();
-    return NextResponse.json({ success: true, data });
+    return apiSuccess(data);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal mengambil data pengumuman" }, { status: 500 });
+    return handleApiError(error, "Gagal mengambil data pengumuman");
   }
 }
 
@@ -26,16 +24,17 @@ export async function POST(request: NextRequest) {
     const parsed = announcementSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
+
+    // Sanitasi teks pengumuman (OWASP A03)
+    const cleanTitle = sanitizeInput(parsed.data.title);
+    const cleanContent = sanitizeInput(parsed.data.content);
 
     // 1. Simpan ke sistem penyimpanan nyata
     const item = createAnnouncement({
-      title: parsed.data.title,
-      content: parsed.data.content,
+      title: cleanTitle,
+      content: cleanContent,
       isImportant: parsed.data.isImportant,
       isActive: parsed.data.isActive,
       startDate: parsed.data.startDate || new Date().toISOString(),
@@ -47,8 +46,8 @@ export async function POST(request: NextRequest) {
     try {
       await prisma.announcement.create({
         data: {
-          title: parsed.data.title,
-          content: parsed.data.content,
+          title: cleanTitle,
+          content: cleanContent,
           isImportant: parsed.data.isImportant,
           isActive: parsed.data.isActive,
           startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : new Date(),
@@ -67,13 +66,8 @@ export async function POST(request: NextRequest) {
       });
     } catch {}
 
-    return NextResponse.json({ success: true, data: item });
+    return apiCreated(item, "Pengumuman berhasil dibuat.");
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Create announcement error:", error);
-    return NextResponse.json({ success: false, message: "Gagal membuat pengumuman" }, { status: 500 });
+    return handleApiError(error, "Gagal membuat pengumuman");
   }
 }

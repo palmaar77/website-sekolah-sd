@@ -5,20 +5,22 @@ import { verifyPassword, hashPassword } from "@/lib/auth/password";
 import { createSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth/jwt";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/audit";
+import {
+  apiBadRequest,
+  apiUnauthorized,
+  apiTooManyRequests,
+  handleApiError,
+} from "@/lib/api-response";
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Dapatkan IP klien untuk rate limiting
+    // 1. Dapatkan IP klien untuk rate limiting (Anti-Brute Force per IP)
     const ip = request.headers.get("x-forwarded-for") || "local-ip";
     const rateCheck = checkRateLimit(`login:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 });
 
     if (!rateCheck.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Terlalu banyak percobaan login. Silakan tunggu beberapa menit lagi.",
-        },
-        { status: 429 }
+      return apiTooManyRequests(
+        "Terlalu banyak percobaan login dari IP ini. Silakan tunggu beberapa menit lagi."
       );
     }
 
@@ -26,33 +28,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validasi gagal",
-          errors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
+      return apiBadRequest("Validasi login gagal", parsed.error.flatten().fieldErrors);
     }
 
     const { email, password } = parsed.data;
     const cleanEmail = email.toLowerCase().trim();
 
-    // 2b. Rate limiting berbasis akun email (mencegah brute-force terdistribusi)
+    // 2b. Rate limiting berbasis akun email (Anti-Brute Force terdistribusi)
     const emailRateCheck = checkRateLimit(`login-email:${cleanEmail}`, {
       limit: 5,
       windowMs: 15 * 60 * 1000,
     });
     if (!emailRateCheck.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "TOO_MANY_ATTEMPTS",
-          message:
-            "Terlalu banyak percobaan gagal pada akun ini. Demi keamanan, silakan tunggu 15 menit.",
-        },
-        { status: 429 }
+      return apiTooManyRequests(
+        "Terlalu banyak percobaan gagal pada akun ini. Demi keamanan, silakan tunggu 15 menit."
       );
     }
 
@@ -65,7 +54,7 @@ export async function POST(request: NextRequest) {
     // 3. Coba cari admin di database
     try {
       user = await prisma.adminUser.findUnique({
-        where: { email: email.toLowerCase().trim() },
+        where: { email: cleanEmail },
       });
       if (user) {
         isDbConnected = true;
@@ -78,10 +67,7 @@ export async function POST(request: NextRequest) {
     // 4. Verifikasi kredensial
     if (user && isDbConnected) {
       if (!user.isActive) {
-        return NextResponse.json(
-          { success: false, message: "Akun admin telah dinonaktifkan" },
-          { status: 401 }
-        );
+        return apiUnauthorized("Akun admin telah dinonaktifkan oleh sekolah.");
       }
 
       let isPasswordValid = await verifyPassword(password, user.passwordHash || "");
@@ -99,13 +85,8 @@ export async function POST(request: NextRequest) {
       }
 
       if (!isPasswordValid) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Email atau kata sandi tidak sesuai. Pastikan akun Admin, Guru, atau Staf Anda telah aktif dan terdaftar.",
-          },
-          { status: 401 }
+        return apiUnauthorized(
+          "Email atau kata sandi tidak sesuai. Pastikan akun Admin, Guru, atau Staf Anda telah aktif dan terdaftar."
         );
       }
 
@@ -117,7 +98,7 @@ export async function POST(request: NextRequest) {
       } catch {}
     } else {
       // Fallback: Jika DB belum terkoneksi atau akun belum diseed
-      const isEmailMatch = email.toLowerCase().trim() === defaultEmail;
+      const isEmailMatch = cleanEmail === defaultEmail;
       const isPasswordMatch = password === defaultPassword;
 
       if (isEmailMatch && isPasswordMatch) {
@@ -128,13 +109,8 @@ export async function POST(request: NextRequest) {
           role: "SUPER_ADMIN",
         };
       } else {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Email atau kata sandi salah. Akses dibatasi hanya untuk Administrator, Guru, dan Staf sekolah yang berwenang.",
-          },
-          { status: 401 }
+        return apiUnauthorized(
+          "Email atau kata sandi salah. Akses dibatasi hanya untuk Administrator, Guru, dan Staf sekolah yang berwenang."
         );
       }
     }
@@ -158,7 +134,7 @@ export async function POST(request: NextRequest) {
       });
     } catch {}
 
-    // 7. Buat response dengan HttpOnly Cookie yang aman
+    // 7. Buat response dengan HttpOnly Secure Cookie (OWASP A07: Identification and Authentication Failures)
     const response = NextResponse.json({
       success: true,
       message: "Login berhasil",
@@ -182,10 +158,6 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Login API error:", error);
-    return NextResponse.json(
-      { success: false, message: "Terjadi kesalahan server saat memproses login admin" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Terjadi kesalahan server saat memproses login admin.");
   }
 }

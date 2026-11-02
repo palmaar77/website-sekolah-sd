@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
+import { apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function GET() {
   try {
@@ -24,12 +24,8 @@ export async function GET() {
         },
       ];
     }
-    return NextResponse.json({ success: true, data });
+    return apiSuccess(data);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal mengambil pesan" }, { status: 500 });
+    return handleApiError(error, "Gagal mengambil pesan");
   }
 }

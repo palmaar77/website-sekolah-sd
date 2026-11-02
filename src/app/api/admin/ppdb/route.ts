@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { getPPDBRegistrations, getPPDBSetting } from "@/lib/storage/db";
 import { formatDateIndo } from "@/lib/utils";
+import { sanitizeCsvCell } from "@/lib/security/sanitize";
+import { apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
     });
     const setting = getPPDBSetting();
 
-    // Jika admin meminta ekspor CSV
+    // 2. Ekspor CSV dengan Proteksi Anti-Formula Injection (OWASP A03: CWE-1236)
     if (format === "csv") {
       const allResult = getPPDBRegistrations({
         search,
@@ -57,48 +59,43 @@ export async function GET(request: NextRequest) {
       ].join(",");
 
       const csvRows = allResult.data.map((r) => {
-        const escapeCsv = (str: string | null | undefined) => {
-          if (!str) return '""';
-          return `"${String(str).replace(/"/g, '""')}"`;
-        };
         const rtVal = r.rt || (r.rtRw ? r.rtRw.split("/")[0]?.trim() : "");
         const rwVal = r.rw || (r.rtRw ? r.rtRw.split("/")[1]?.trim() : "");
         return [
-          escapeCsv(r.registrationNumber),
-          escapeCsv(r.fullName),
-          escapeCsv(r.nik),
-          escapeCsv(r.birthPlace),
-          escapeCsv(formatDateIndo(r.birthDate)),
-          escapeCsv(r.gender === "LAKI_LAKI" ? "Laki-laki" : "Perempuan"),
-          escapeCsv(r.address),
-          escapeCsv(rtVal),
-          escapeCsv(rwVal),
-          escapeCsv(r.village),
-          escapeCsv(r.district),
-          escapeCsv(r.parentName),
-          escapeCsv(r.parentPhone),
-          escapeCsv(r.parentJob),
-          escapeCsv(r.previousSchool),
-          escapeCsv(r.path),
-          escapeCsv(r.status),
-          escapeCsv(r.verificationNotes),
-          escapeCsv(formatDateIndo(r.createdAt, true)),
+          sanitizeCsvCell(r.registrationNumber),
+          sanitizeCsvCell(r.fullName),
+          sanitizeCsvCell(r.nik),
+          sanitizeCsvCell(r.birthPlace),
+          sanitizeCsvCell(formatDateIndo(r.birthDate)),
+          sanitizeCsvCell(r.gender === "LAKI_LAKI" ? "Laki-laki" : "Perempuan"),
+          sanitizeCsvCell(r.address),
+          sanitizeCsvCell(rtVal),
+          sanitizeCsvCell(rwVal),
+          sanitizeCsvCell(r.village),
+          sanitizeCsvCell(r.district),
+          sanitizeCsvCell(r.parentName),
+          sanitizeCsvCell(r.parentPhone),
+          sanitizeCsvCell(r.parentJob),
+          sanitizeCsvCell(r.previousSchool),
+          sanitizeCsvCell(r.path),
+          sanitizeCsvCell(r.status),
+          sanitizeCsvCell(r.verificationNotes),
+          sanitizeCsvCell(formatDateIndo(r.createdAt, true)),
         ].join(",");
       });
 
-      const csvContent = "\uFEFF" + [csvHeader, ...csvRows].join("\n"); // UTF-8 BOM untuk Excel
+      const csvContent = "\uFEFF" + [csvHeader, ...csvRows].join("\n"); // UTF-8 BOM untuk Microsoft Excel
 
       return new NextResponse(csvContent, {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
           "Content-Disposition": `attachment; filename="data-pendaftar-ppdb-${new Date().toISOString().slice(0, 10)}.csv"`,
+          "X-Content-Type-Options": "nosniff",
         },
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: storageResult.data,
+    return apiSuccess(storageResult.data, {
       setting,
       pagination: {
         page,
@@ -107,11 +104,7 @@ export async function GET(request: NextRequest) {
         totalPages: storageResult.totalPages,
       },
     });
-  } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("PPDB admin list error:", error);
-    return NextResponse.json({ success: false, message: "Gagal mengambil data PPDB" }, { status: 500 });
+  } catch (error: unknown) {
+    return handleApiError(error, "Gagal mengambil data PPDB dari sistem.");
   }
 }

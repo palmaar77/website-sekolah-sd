@@ -1,6 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { ppdbRegistrationSchema } from "@/lib/validations/ppdb";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import {
+  apiBadRequest,
+  apiCreated,
+  apiTooManyRequests,
+  handleApiError,
+} from "@/lib/api-response";
 import {
   getPPDBSetting,
   createPPDBRegistration,
@@ -13,27 +20,18 @@ export async function POST(request: NextRequest) {
     // Limit: 5 pendaftaran per jam per IP
     const rateCheck = checkRateLimit(`ppdb:${ip}`, { limit: 5, windowMs: 60 * 60 * 1000 });
     if (!rateCheck.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Batas pengiriman formulir tercapai. Silakan coba kembali beberapa saat lagi.",
-        },
-        { status: 429 }
+      return apiTooManyRequests(
+        "Batas pengiriman formulir tercapai. Silakan coba kembali beberapa saat lagi."
       );
     }
 
     // 1. Cek apakah layanan PPDB sedang dibuka dan aktif di server
     const setting = getPPDBSetting();
     if (!setting.isOpen) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "SERVICE_INACTIVE",
-          message:
-            "Layanan pendaftaran PPDB saat ini belum dibuka / sedang ditutup oleh panitia sekolah. Silakan pantau pengumuman resmi jadwal pembukaan pendaftaran.",
-        },
-        { status: 400 }
+      return apiBadRequest(
+        "Layanan pendaftaran PPDB saat ini belum dibuka / sedang ditutup oleh panitia sekolah. Silakan pantau pengumuman resmi jadwal pembukaan pendaftaran.",
+        undefined,
+        "SERVICE_INACTIVE"
       );
     }
 
@@ -42,63 +40,69 @@ export async function POST(request: NextRequest) {
     const parsed = ppdbRegistrationSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "VALIDATION_ERROR",
-          message: "Data formulir tidak lengkap atau format salah. Mohon periksa kembali isian Anda.",
-          errors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
+      return apiBadRequest(
+        "Data formulir tidak lengkap atau format salah. Mohon periksa kembali isian Anda.",
+        parsed.error.flatten().fieldErrors,
+        "VALIDATION_ERROR"
       );
     }
 
     const data = parsed.data;
 
     // Normalisasi dan hitung RT/RW
-    const rtClean = data.rt?.trim() || null;
-    const rwClean = data.rw?.trim() || null;
+    const rtClean = data.rt ? sanitizeInput(data.rt) : null;
+    const rwClean = data.rw ? sanitizeInput(data.rw) : null;
     const computedRtRw =
-      data.rtRw?.trim() ||
+      (data.rtRw ? sanitizeInput(data.rtRw) : null) ||
       (rtClean && rwClean
         ? `${rtClean} / ${rwClean}`
         : rtClean || rwClean || null);
+
+    // Sanitasi XSS seluruh isian teks calon siswa
+    const cleanFullName = sanitizeInput(data.fullName);
+    const cleanNik = data.nik.trim();
+    const cleanBirthPlace = sanitizeInput(data.birthPlace);
+    const cleanAddress = sanitizeInput(data.address);
+    const cleanParentName = sanitizeInput(data.parentName);
+    const cleanParentPhone = data.parentPhone.trim();
+    const cleanParentJob = data.parentJob ? sanitizeInput(data.parentJob) : null;
+    const cleanParentIncome = data.parentIncome ? sanitizeInput(data.parentIncome) : null;
+    const cleanVillage = data.village ? sanitizeInput(data.village) : null;
+    const cleanDistrict = data.district ? sanitizeInput(data.district) : null;
+    const cleanPreviousSchool = data.previousSchool ? sanitizeInput(data.previousSchool) : null;
 
     // 3. Simpan ke sistem penyimpanan nyata (Persistent Storage)
     let registration;
     try {
       registration = createPPDBRegistration({
-        fullName: data.fullName.trim(),
-        nik: data.nik.trim(),
-        birthPlace: data.birthPlace.trim(),
+        fullName: cleanFullName,
+        nik: cleanNik,
+        birthPlace: cleanBirthPlace,
         birthDate: new Date(data.birthDate).toISOString(),
         gender: data.gender,
         religion: data.religion || null,
-        address: data.address.trim(),
+        address: cleanAddress,
         rt: rtClean,
         rw: rwClean,
         rtRw: computedRtRw,
-        village: data.village || null,
-        district: data.district || null,
-        parentName: data.parentName.trim(),
-        parentPhone: data.parentPhone.trim(),
-        parentJob: data.parentJob || null,
-        parentIncome: data.parentIncome || null,
-        previousSchool: data.previousSchool || null,
+        village: cleanVillage,
+        district: cleanDistrict,
+        parentName: cleanParentName,
+        parentPhone: cleanParentPhone,
+        parentJob: cleanParentJob,
+        parentIncome: cleanParentIncome,
+        previousSchool: cleanPreviousSchool,
         path: data.path,
       });
     } catch (saveError: any) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "DUPLICATE_REGISTRATION",
-          message: saveError.message || "Gagal menyimpan pendaftaran ke database.",
-        },
-        { status: 400 }
+      return apiBadRequest(
+        saveError.message || "Gagal menyimpan pendaftaran ke database.",
+        undefined,
+        "DUPLICATE_REGISTRATION"
       );
     }
 
-    // Coba simpan ke database Prisma bila database PostgreSQL aktif
+    // Coba sinkronisasi ke database Prisma bila database PostgreSQL aktif
     try {
       await prisma.pPDBRegistration.create({
         data: {
@@ -126,10 +130,8 @@ export async function POST(request: NextRequest) {
       // Prisma offline, penyimpanan disk telah berhasil mencatat data secara permanen
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Pendaftaran PPDB berhasil tercatat di sistem sekolah.",
-      data: {
+    return apiCreated(
+      {
         registrationNumber: registration.registrationNumber,
         fullName: registration.fullName,
         nik: registration.nik,
@@ -137,16 +139,9 @@ export async function POST(request: NextRequest) {
         status: registration.status,
         createdAt: registration.createdAt,
       },
-    });
-  } catch (error: any) {
-    console.error("PPDB register error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        code: "SERVER_ERROR",
-        message: "Terjadi kesalahan internal pada sistem pendaftaran.",
-      },
-      { status: 500 }
+      "Pendaftaran PPDB berhasil tercatat di sistem sekolah."
     );
+  } catch (error: unknown) {
+    return handleApiError(error, "Terjadi kesalahan internal pada sistem pendaftaran.");
   }
 }

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
+import { apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function GET() {
   try {
@@ -49,8 +49,7 @@ export async function GET() {
         }),
       ]);
 
-      return NextResponse.json({
-        success: true,
+      return apiSuccess({
         stats: {
           newsCount,
           announcementCount,
@@ -68,8 +67,7 @@ export async function GET() {
       });
     } catch {
       // Fallback ketika PostgreSQL belum aktif / sedang offline
-      return NextResponse.json({
-        success: true,
+      return apiSuccess({
         stats: {
           newsCount: 8,
           announcementCount: 4,
@@ -120,11 +118,6 @@ export async function GET() {
       });
     }
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Overview error:", error);
-    return NextResponse.json({ success: false, message: "Kesalahan server" }, { status: 500 });
+    return handleApiError(error, "Kesalahan server saat memuat overview");
   }
 }

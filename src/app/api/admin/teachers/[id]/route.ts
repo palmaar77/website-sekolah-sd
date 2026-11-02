@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { teacherSchema } from "@/lib/validations/teacher";
 import { logActivity } from "@/lib/audit";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiNotFound, apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function PUT(
   request: NextRequest,
@@ -15,15 +17,21 @@ export async function PUT(
     const parsed = teacherSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
+
+    const cleanData = {
+      ...parsed.data,
+      name: sanitizeInput(parsed.data.name),
+      nip: parsed.data.nip ? parsed.data.nip.trim() : null,
+      role: sanitizeInput(parsed.data.role),
+      subject: parsed.data.subject ? sanitizeInput(parsed.data.subject) : null,
+      education: parsed.data.education ? sanitizeInput(parsed.data.education) : null,
+    };
 
     const updated = await prisma.teacher.update({
       where: { id },
-      data: parsed.data,
+      data: cleanData,
     });
 
     await logActivity({
@@ -33,13 +41,9 @@ export async function PUT(
       details: `Memperbarui guru/staf: "${updated.name}"`,
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    return apiSuccess(updated);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal memperbarui data guru" }, { status: 500 });
+    return handleApiError(error, "Gagal memperbarui data guru");
   }
 }
 
@@ -53,7 +57,7 @@ export async function DELETE(
     const existing = await prisma.teacher.findUnique({ where: { id } });
 
     if (!existing) {
-      return NextResponse.json({ success: false, message: "Guru tidak ditemukan" }, { status: 404 });
+      return apiNotFound("Guru tidak ditemukan");
     }
 
     await prisma.teacher.delete({ where: { id } });
@@ -65,12 +69,8 @@ export async function DELETE(
       details: `Menghapus guru/staf: "${existing.name}"`,
     });
 
-    return NextResponse.json({ success: true, message: "Data guru berhasil dihapus" });
+    return apiSuccess({ message: "Data guru berhasil dihapus" });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal menghapus data guru" }, { status: 500 });
+    return handleApiError(error, "Gagal menghapus data guru");
   }
 }

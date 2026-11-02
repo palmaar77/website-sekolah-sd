@@ -1,8 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { schoolProfileSchema } from "@/lib/validations/profile";
 import { logActivity } from "@/lib/audit";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function GET() {
   try {
@@ -14,13 +16,9 @@ export async function GET() {
       profile = await prisma.schoolProfile.findFirst();
     }
 
-    return NextResponse.json({ success: true, data: profile });
+    return apiSuccess(profile);
   } catch (error) {
-    console.error("Get profile error:", error);
-    return NextResponse.json(
-      { success: false, message: "Gagal mengambil data profil sekolah" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Gagal mengambil data profil sekolah");
   }
 }
 
@@ -31,17 +29,23 @@ export async function PUT(request: NextRequest) {
     const parsed = schoolProfileSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validasi data profil gagal",
-          errors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
 
     const data = parsed.data;
+
+    // Sanitasi teks profil sekolah
+    const cleanData = {
+      ...data,
+      schoolName: sanitizeInput(data.schoolName),
+      address: sanitizeInput(data.address),
+      vision: sanitizeInput(data.vision),
+      history: sanitizeInput(data.history),
+      mission: sanitizeInput(data.mission),
+      goals: sanitizeInput(data.goals),
+      principalName: sanitizeInput(data.principalName),
+      principalMessage: sanitizeInput(data.principalMessage),
+    };
 
     // Cari profil yang sudah ada untuk memperbarui ID yang tepat
     const existing =
@@ -53,10 +57,10 @@ export async function PUT(request: NextRequest) {
 
     const updated = await prisma.schoolProfile.upsert({
       where: { id: profileId },
-      update: data,
+      update: cleanData,
       create: {
         id: profileId,
-        ...data,
+        ...cleanData,
       },
     });
 
@@ -67,22 +71,8 @@ export async function PUT(request: NextRequest) {
       details: "Memperbarui informasi profil, visi, misi, dan identitas sekolah",
     });
 
-    return NextResponse.json({ success: true, data: updated });
+    return apiSuccess(updated);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json(
-        { success: false, message: "Akses ditolak. Silakan login kembali." },
-        { status: 401 }
-      );
-    }
-    console.error("Update profile error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: err.message || "Gagal memperbarui profil sekolah",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, "Gagal memperbarui profil sekolah");
   }
 }

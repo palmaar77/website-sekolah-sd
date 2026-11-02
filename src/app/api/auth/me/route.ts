@@ -1,15 +1,12 @@
-import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
+import { apiSuccess, apiUnauthorized, handleApiError } from "@/lib/api-response";
 
 export async function GET() {
   try {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json(
-        { success: false, message: "Belum login" },
-        { status: 401 }
-      );
+      return apiUnauthorized("Sesi admin tidak ditemukan. Silakan login.");
     }
 
     let user: any = null;
@@ -40,15 +37,8 @@ export async function GET() {
       };
     }
 
-    return NextResponse.json({
-      success: true,
-      user,
-    });
+    return apiSuccess({ user });
   } catch (error) {
-    console.error("Auth me error:", error);
-    return NextResponse.json(
-      { success: false, message: "Kesalahan server saat memverifikasi sesi" },
-      { status: 500 }
-    );
+    return handleApiError(error, "Kesalahan server saat memverifikasi sesi");
   }
 }

@@ -33,11 +33,13 @@ export function Navbar() {
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
-  // Tutup menu mobile & dropdown ketika navigasi berubah
-  React.useEffect(() => {
+  // Tutup menu mobile & dropdown ketika navigasi berubah (sesuai best practice React 19)
+  const [prevPathname, setPrevPathname] = React.useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setIsOpen(false);
     setIsLoginDropdownOpen(false);
-  }, [pathname]);
+  }
 
   // Tutup dropdown jika klik di luar area
   React.useEffect(() => {

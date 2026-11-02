@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { logActivity } from "@/lib/audit";
@@ -6,9 +6,10 @@ import {
   getGalleryById,
   updateGallery,
   deleteGallery,
-  getGalleryCategories,
 } from "@/lib/storage/db";
 import { galleryItemSchema } from "@/lib/validations/gallery";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiNotFound, apiSuccess, handleApiError } from "@/lib/api-response";
 
 export async function GET(
   _request: NextRequest,
@@ -27,12 +28,12 @@ export async function GET(
     }
 
     if (!item) {
-      return NextResponse.json({ success: false, message: "Foto galeri tidak ditemukan" }, { status: 404 });
+      return apiNotFound("Foto galeri tidak ditemukan");
     }
 
-    return NextResponse.json({ success: true, data: item });
-  } catch {
-    return NextResponse.json({ success: false, message: "Kesalahan server" }, { status: 500 });
+    return apiSuccess(item);
+  } catch (error) {
+    return handleApiError(error, "Kesalahan server saat mengambil foto galeri");
   }
 }
 
@@ -47,18 +48,18 @@ export async function PATCH(
     const parsed = galleryItemSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal: periksa kelengkapan isian", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
+
+    const cleanTitle = sanitizeInput(parsed.data.title);
+    const cleanDescription = parsed.data.description ? sanitizeInput(parsed.data.description) : null;
 
     let updated: any;
     try {
       updated = updateGallery(id, {
-        title: parsed.data.title.trim(),
+        title: cleanTitle,
         imageUrl: parsed.data.imageUrl.trim(),
-        description: parsed.data.description?.trim() || null,
+        description: cleanDescription,
         categoryId: parsed.data.categoryId,
         isFeatured: parsed.data.isFeatured,
       });
@@ -68,9 +69,9 @@ export async function PATCH(
       const prismaUpdated = await prisma.gallery.update({
         where: { id },
         data: {
-          title: parsed.data.title.trim(),
+          title: cleanTitle,
           imageUrl: parsed.data.imageUrl.trim(),
-          description: parsed.data.description?.trim() || null,
+          description: cleanDescription,
           categoryId: parsed.data.categoryId,
           isFeatured: parsed.data.isFeatured,
         },
@@ -79,7 +80,7 @@ export async function PATCH(
     } catch {}
 
     if (!updated) {
-      return NextResponse.json({ success: false, message: "Foto galeri tidak ditemukan untuk diperbarui" }, { status: 404 });
+      return apiNotFound("Foto galeri tidak ditemukan untuk diperbarui");
     }
 
     await logActivity({
@@ -89,13 +90,9 @@ export async function PATCH(
       details: `Memperbarui foto galeri: "${updated.title}"`,
     });
 
-    return NextResponse.json({ success: true, message: "Foto galeri berhasil diperbarui", data: updated });
+    return apiSuccess(updated, { message: "Foto galeri berhasil diperbarui" });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal memperbarui foto galeri" }, { status: 500 });
+    return handleApiError(error, "Gagal memperbarui foto galeri");
   }
 }
 
@@ -119,7 +116,7 @@ export async function DELETE(
       } catch {}
     }
 
-    const deleted = deleteGallery(id);
+    deleteGallery(id);
 
     try {
       await prisma.gallery.delete({ where: { id } });
@@ -132,12 +129,8 @@ export async function DELETE(
       details: `Menghapus foto galeri: "${title || id}"`,
     });
 
-    return NextResponse.json({ success: true, message: "Foto galeri berhasil dihapus" });
+    return apiSuccess({ message: "Foto galeri berhasil dihapus" });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal menghapus foto galeri" }, { status: 500 });
+    return handleApiError(error, "Gagal menghapus foto galeri");
   }
 }

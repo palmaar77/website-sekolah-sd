@@ -1,12 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { assertStudentOwnership } from "@/lib/auth/rbac";
 import prisma from "@/lib/prisma";
+import {
+  apiForbidden,
+  apiSuccess,
+  apiUnauthorized,
+  handleApiError,
+} from "@/lib/api-response";
 
 /**
  * GET /api/siswa/data/[studentId]
  * Mengambil profil data siswa berdasarkan nomor registrasi.
- * Mencegah siswa membaca data pribadi siswa lain hanya dengan mengganti ID pada URL.
+ * Mencegah siswa membaca data pribadi siswa lain hanya dengan mengganti ID pada URL (OWASP A01: IDOR).
  */
 export async function GET(
   _request: NextRequest,
@@ -17,14 +23,7 @@ export async function GET(
     const current = await getCurrentSession();
 
     if (!current) {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "UNAUTHORIZED",
-          message: "Akses ditolak. Silakan login ke portal terlebih dahulu.",
-        },
-        { status: 401 }
-      );
+      return apiUnauthorized("Akses ditolak. Silakan login ke portal terlebih dahulu.");
     }
 
     // Validasi kepemilikan di server (IDOR Check)
@@ -65,38 +64,18 @@ export async function GET(
         } as any;
       }
 
-      return NextResponse.json({
-        success: true,
-        data: studentData,
-        meta: {
-          viewerRole: current.session.role,
-          isOwner: authResult.isOwner,
-          isAdmin: authResult.isAdmin,
-        },
+      return apiSuccess(studentData, {
+        viewerRole: current.session.role,
+        isOwner: authResult.isOwner,
+        isAdmin: authResult.isAdmin,
       });
     } catch (authError: any) {
       if (authError.name === "AuthorizationError") {
-        return NextResponse.json(
-          {
-            success: false,
-            code: authError.code,
-            message: authError.message,
-            attemptedTargetId: studentId,
-          },
-          { status: authError.statusCode || 403 }
-        );
+        return apiForbidden(authError.message, authError.code);
       }
       throw authError;
     }
-  } catch (error: any) {
-    console.error("API /api/siswa/data/[studentId] error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        code: "SERVER_ERROR",
-        message: "Gagal mengambil data siswa.",
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleApiError(error, "Gagal mengambil data siswa.");
   }
 }

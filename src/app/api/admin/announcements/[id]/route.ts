@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { announcementSchema } from "@/lib/validations/news";
 import { logActivity } from "@/lib/audit";
 import {
-  getAnnouncementById,
   updateAnnouncement,
   deleteAnnouncement,
 } from "@/lib/storage/db";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiNotFound, apiSuccess, handleApiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 
 export async function PUT(
@@ -20,18 +21,18 @@ export async function PUT(
     const parsed = announcementSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, message: "Validasi gagal", errors: parsed.error.flatten().fieldErrors },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
+
+    const cleanTitle = sanitizeInput(parsed.data.title);
+    const cleanContent = sanitizeInput(parsed.data.content);
 
     // 1. Simpan ke sistem penyimpanan nyata
     let updated;
     try {
       updated = updateAnnouncement(id, {
-        title: parsed.data.title,
-        content: parsed.data.content,
+        title: cleanTitle,
+        content: cleanContent,
         isImportant: parsed.data.isImportant,
         isActive: parsed.data.isActive,
         startDate: parsed.data.startDate || undefined,
@@ -45,8 +46,8 @@ export async function PUT(
       await prisma.announcement.update({
         where: { id },
         data: {
-          title: parsed.data.title,
-          content: parsed.data.content,
+          title: cleanTitle,
+          content: cleanContent,
           isImportant: parsed.data.isImportant,
           isActive: parsed.data.isActive,
           startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : undefined,
@@ -60,17 +61,17 @@ export async function PUT(
         adminId: session.userId,
         adminName: session.name,
         action: "UPDATE_ANNOUNCEMENT",
-        details: `Memperbarui pengumuman: "${parsed.data.title}"`,
+        details: `Memperbarui pengumuman: "${cleanTitle}"`,
       });
     } catch {}
 
-    return NextResponse.json({ success: true, data: updated });
-  } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
+    if (!updated) {
+      return apiNotFound("Pengumuman tidak ditemukan untuk diperbarui");
     }
-    return NextResponse.json({ success: false, message: "Gagal memperbarui pengumuman" }, { status: 500 });
+
+    return apiSuccess(updated);
+  } catch (error: unknown) {
+    return handleApiError(error, "Gagal memperbarui pengumuman");
   }
 }
 
@@ -97,15 +98,10 @@ export async function DELETE(
       });
     } catch {}
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       message: deleted ? "Pengumuman berhasil dihapus dari sistem" : "Pengumuman telah dihapus",
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal menghapus pengumuman" }, { status: 500 });
+    return handleApiError(error, "Gagal menghapus pengumuman");
   }
 }

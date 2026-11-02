@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { updatePPDBStatusSchema } from "@/lib/validations/ppdb";
 import { logActivity } from "@/lib/audit";
@@ -7,6 +7,8 @@ import {
   updatePPDBRegistrationStatus,
   deletePPDBRegistration,
 } from "@/lib/storage/db";
+import { sanitizeInput } from "@/lib/security/sanitize";
+import { apiNotFound, apiSuccess, handleApiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 
 export async function GET(
@@ -35,16 +37,12 @@ export async function GET(
     }
 
     if (!item) {
-      return NextResponse.json({ success: false, message: "Pendaftar tidak ditemukan" }, { status: 404 });
+      return apiNotFound("Pendaftar tidak ditemukan");
     }
 
-    return NextResponse.json({ success: true, data: item });
+    return apiSuccess(item);
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Kesalahan server" }, { status: 500 });
+    return handleApiError(error, "Kesalahan server saat mengambil data pendaftar");
   }
 }
 
@@ -60,18 +58,11 @@ export async function PATCH(
     const parsed = updatePPDBStatusSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validasi verifikasi gagal: mohon periksa kembali status dan catatan verifikasi.",
-          errors: parsed.error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
+      return handleApiError(parsed.error);
     }
 
     const { status, verificationNotes } = parsed.data;
-    const cleanNotes = verificationNotes && verificationNotes.trim() ? verificationNotes.trim() : null;
+    const cleanNotes = verificationNotes && verificationNotes.trim() ? sanitizeInput(verificationNotes) : null;
 
     // 1. Simpan perubahan ke persistent storage
     let updated: any;
@@ -116,10 +107,7 @@ export async function PATCH(
     } catch {}
 
     if (!updated) {
-      return NextResponse.json(
-        { success: false, message: `Pendaftar dengan nomor/ID "${cleanId}" tidak ditemukan.` },
-        { status: 404 }
-      );
+      return apiNotFound(`Pendaftar dengan nomor/ID "${cleanId}" tidak ditemukan.`);
     }
 
     try {
@@ -131,18 +119,9 @@ export async function PATCH(
       });
     } catch {}
 
-    return NextResponse.json({
-      success: true,
-      message: "Status verifikasi pendaftaran berhasil diperbarui",
-      data: updated,
-    });
+    return apiSuccess(updated, { message: "Status verifikasi pendaftaran berhasil diperbarui" });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    console.error("Update PPDB status error:", error);
-    return NextResponse.json({ success: false, message: "Gagal memperbarui status pendaftar" }, { status: 500 });
+    return handleApiError(error, "Gagal memperbarui status pendaftar");
   }
 }
 
@@ -181,15 +160,10 @@ export async function DELETE(
       });
     } catch {}
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       message: deleted ? "Pendaftar berhasil dihapus dari sistem" : "Data pendaftaran telah dihapus",
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    if (err.message === "UNAUTHORIZED" || (err as any).name === "AuthorizationError") {
-      return NextResponse.json({ success: false, message: "Akses ditolak" }, { status: 401 });
-    }
-    return NextResponse.json({ success: false, message: "Gagal menghapus pendaftar" }, { status: 500 });
+    return handleApiError(error, "Gagal menghapus pendaftar");
   }
 }

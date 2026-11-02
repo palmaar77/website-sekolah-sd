@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import { getAllStudentsReportsSummary } from "@/lib/services/grades";
+import { apiSuccess, handleApiError } from "@/lib/api-response";
 
 /**
  * GET /api/admin/nilai
@@ -12,8 +12,7 @@ export async function GET() {
     const session = await requireAuth(["SUPER_ADMIN", "ADMIN", "STAFF"]);
     const summary = await getAllStudentsReportsSummary();
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       data: summary,
       admin: {
         id: session.userId,
@@ -21,24 +20,7 @@ export async function GET() {
         role: session.role,
       },
     });
-  } catch (error: any) {
-    if (error.message === "UNAUTHORIZED" || error.name === "AuthorizationError") {
-      return NextResponse.json(
-        {
-          success: false,
-          code: "FORBIDDEN",
-          message: "Akses ditolak: Hanya guru dan staf admin yang berhak mengakses data nilai sekolah.",
-        },
-        { status: 403 }
-      );
-    }
-    console.error("Admin nilai error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Gagal mengambil data nilai siswa.",
-      },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return handleApiError(error, "Gagal mengambil data nilai siswa.");
   }
 }
