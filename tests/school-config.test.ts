@@ -47,3 +47,4 @@ describe("Konfigurasi Terpusat Sekolah & Fungsi Pembantu", () => {
     assert.equal(cleanDemoMarkers("Provinsi Contoh"), SCHOOL_CONFIG.province);
   });
 });
+
