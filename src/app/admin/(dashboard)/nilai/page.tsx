@@ -21,6 +21,10 @@ import {
   Save,
   RotateCcw,
   RefreshCw,
+  Plus,
+  Trash2,
+  UserPlus,
+  Sparkle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -76,6 +80,37 @@ interface StudentReportDetail {
   updatedAt: string;
 }
 
+interface AvailableStudent {
+  registrationNumber: string;
+  fullName: string;
+  nisn: string;
+  className: string;
+}
+
+interface CreateReportForm {
+  registrationNumber: string;
+  fullName: string;
+  nisn: string;
+  className: string;
+  semester: string;
+  academicYear: string;
+  phase: string;
+  homeroomTeacher: string;
+  homeroomTeacherNip: string;
+  subjects: SubjectGrade[];
+  attendance: {
+    sakit: number;
+    izin: number;
+    tanpaKeterangan: number;
+  };
+  extracurriculars: Array<{
+    name: string;
+    predicate: string;
+    notes: string;
+  }>;
+  teacherNotes: string;
+}
+
 function calculatePredicate(score: number): "A" | "B" | "C" | "D" {
   if (score >= 90) return "A";
   if (score >= 80) return "B";
@@ -83,8 +118,111 @@ function calculatePredicate(score: number): "A" | "B" | "C" | "D" {
   return "D";
 }
 
+const DEFAULT_NEW_SUBJECTS: SubjectGrade[] = [
+  {
+    code: "PAI",
+    name: "Pendidikan Agama dan Budi Pekerti",
+    kkm: 75,
+    score: 88,
+    predicate: "B",
+    competencyDesc: "Sangat baik dalam memahami kisah keteladanan para nabi dan mempraktikkan tata cara doa sehari-hari dengan tertib.",
+  },
+  {
+    code: "PPKN",
+    name: "Pendidikan Pancasila",
+    kkm: 75,
+    score: 87,
+    predicate: "B",
+    competencyDesc: "Menunjukkan pemahaman yang baik tentang simbol sila Pancasila serta aktif menerapkan sikap gotong royong di lingkungan kelas.",
+  },
+  {
+    code: "BIND",
+    name: "Bahasa Indonesia",
+    kkm: 75,
+    score: 86,
+    predicate: "B",
+    competencyDesc: "Terampil dalam melafalkan intonasi membaca teks narasi pendek dan mampu menulis kalimat sederhana dengan ejaan yang rapi.",
+  },
+  {
+    code: "MTK",
+    name: "Matematika",
+    kkm: 75,
+    score: 85,
+    predicate: "B",
+    competencyDesc: "Menguasai konsep penjumlahan dan pengurangan bilangan cacah sampai 100 dengan pemecahan masalah kontekstual.",
+  },
+  {
+    code: "IPAS",
+    name: "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
+    kkm: 75,
+    score: 89,
+    predicate: "B",
+    competencyDesc: "Sangat aktif dalam mengamati siklus makhluk hidup di sekitar taman sekolah dan peduli terhadap kebersihan lingkungan.",
+  },
+  {
+    code: "PJOK",
+    name: "Pendidikan Jasmani, Olahraga, dan Kesehatan",
+    kkm: 75,
+    score: 90,
+    predicate: "A",
+    competencyDesc: "Sangat terampil dalam mempraktikkan gerak dasar lokomotor, non-lokomotor, dan manipulatif dengan penuh sportivitas.",
+  },
+  {
+    code: "SENI",
+    name: "Seni Rupa dan Prakarya",
+    kkm: 75,
+    score: 86,
+    predicate: "B",
+    competencyDesc: "Kreatif dalam memadukan warna pada karya kolase bahan alam dan memiliki kerapian yang konsisten.",
+  },
+  {
+    code: "BING",
+    name: "Bahasa Inggris Dasar",
+    kkm: 75,
+    score: 84,
+    predicate: "B",
+    competencyDesc: "Mampu merespons sapaan sederhana (greetings) dan menyebutkan kosakata benda di dalam kelas dengan percaya diri.",
+  },
+];
+
+function getInitialCreateForm(): CreateReportForm {
+  const randomChars = Math.random().toString(36).substring(2, 7).toUpperCase();
+  return {
+    registrationNumber: `PPDB-2025-${randomChars}`,
+    fullName: "",
+    nisn: `012${Math.floor(1000000 + Math.random() * 9000000)}`,
+    className: "Kelas 1 (Fase A) - Merdeka",
+    semester: "Semester Ganjil",
+    academicYear: "2024/2025",
+    phase: "Fase A (Kelas 1 - 2 SD)",
+    homeroomTeacher: "Hj. Nurul Aini, S.Pd., M.Pd.",
+    homeroomTeacherNip: "19820415 200801 2 009",
+    subjects: JSON.parse(JSON.stringify(DEFAULT_NEW_SUBJECTS)),
+    attendance: {
+      sakit: 0,
+      izin: 0,
+      tanpaKeterangan: 0,
+    },
+    extracurriculars: [
+      {
+        name: "Pramuka Siaga",
+        predicate: "Sangat Baik",
+        notes: "Disiplin, rajin mengikuti latihan mingguan, dan mandiri.",
+      },
+      {
+        name: "Seni Musik & Tari Tradisional",
+        predicate: "Baik",
+        notes: "Mampu mengikuti ritme irama musik dengan harmonis.",
+      },
+    ],
+    teacherNotes:
+      "Ananda memiliki motivasi belajar yang tinggi, berakhlak mulia, dan aktif saat pembelajaran di kelas. Pertahankan semangat belajarmu!",
+  };
+}
+
 export default function AdminNilaiPage() {
   const [students, setStudents] = React.useState<StudentSummary[]>([]);
+  const [availableStudents, setAvailableStudents] = React.useState<AvailableStudent[]>([]);
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
@@ -97,6 +235,13 @@ export default function AdminNilaiPage() {
   const [editForm, setEditForm] = React.useState<StudentReportDetail | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = React.useState<string | null>(null);
+
+  // Create New Report Modal State
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [createTab, setCreateTab] = React.useState<"identitas" | "nilai" | "tambahan">("identitas");
+  const [createForm, setCreateForm] = React.useState<CreateReportForm>(getInitialCreateForm());
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [createErrorMsg, setCreateErrorMsg] = React.useState<string | null>(null);
 
   const loadData = React.useCallback(async () => {
     setIsLoading(true);
@@ -112,6 +257,10 @@ export default function AdminNilaiPage() {
           ? json.data.data
           : [];
         setStudents(studentList);
+
+        if (json.meta?.availableStudents && Array.isArray(json.meta.availableStudents)) {
+          setAvailableStudents(json.meta.availableStudents);
+        }
       } else {
         setErrorMessage(json.message || "Gagal memuat daftar nilai siswa.");
       }
@@ -127,15 +276,174 @@ export default function AdminNilaiPage() {
     loadData();
   }, [loadData]);
 
+  const handleOpenCreateModal = () => {
+    setCreateForm(getInitialCreateForm());
+    setCreateTab("identitas");
+    setCreateErrorMsg(null);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleSelectPPDBStudent = (regNumber: string) => {
+    const found = availableStudents.find((s) => s.registrationNumber === regNumber);
+    if (found) {
+      setCreateForm((prev) => ({
+        ...prev,
+        registrationNumber: found.registrationNumber,
+        fullName: found.fullName,
+        nisn: found.nisn || prev.nisn,
+        className: found.className || prev.className,
+      }));
+    }
+  };
+
+  const handleGenerateRegNumber = () => {
+    const randomChars = Math.random().toString(36).substring(2, 7).toUpperCase();
+    setCreateForm((prev) => ({
+      ...prev,
+      registrationNumber: `PPDB-2025-${randomChars}`,
+    }));
+  };
+
+  const handleCreateScoreChange = (index: number, newScore: number) => {
+    const clampedScore = Math.max(0, Math.min(100, isNaN(newScore) ? 0 : newScore));
+    const updatedSubjects = [...createForm.subjects];
+    updatedSubjects[index] = {
+      ...updatedSubjects[index],
+      score: clampedScore,
+      predicate: calculatePredicate(clampedScore),
+    };
+    setCreateForm((prev) => ({
+      ...prev,
+      subjects: updatedSubjects,
+    }));
+  };
+
+  const handleCreateCompetencyDescChange = (index: number, desc: string) => {
+    const updatedSubjects = [...createForm.subjects];
+    updatedSubjects[index] = {
+      ...updatedSubjects[index],
+      competencyDesc: desc,
+    };
+    setCreateForm((prev) => ({
+      ...prev,
+      subjects: updatedSubjects,
+    }));
+  };
+
+  const handleAddSubjectToCreateForm = () => {
+    const newSubject: SubjectGrade = {
+      code: `MULOK${createForm.subjects.length + 1}`,
+      name: "Bahasa & Sastra Daerah (Muatan Lokal)",
+      kkm: 75,
+      score: 85,
+      predicate: "B",
+      competencyDesc: "Mampu memahami kosakata dan tata bahasa daerah dengan santun dan komunikatif.",
+    };
+    setCreateForm((prev) => ({
+      ...prev,
+      subjects: [...prev.subjects, newSubject],
+    }));
+  };
+
+  const handleRemoveSubjectFromCreateForm = (index: number) => {
+    if (createForm.subjects.length <= 1) {
+      alert("Rapor minimal harus memiliki satu mata pelajaran.");
+      return;
+    }
+    const updated = createForm.subjects.filter((_, idx) => idx !== index);
+    setCreateForm((prev) => ({
+      ...prev,
+      subjects: updated,
+    }));
+  };
+
+  const handleAddExtracurricular = () => {
+    setCreateForm((prev) => ({
+      ...prev,
+      extracurriculars: [
+        ...prev.extracurriculars,
+        {
+          name: "Dokter Kecil / UKS",
+          predicate: "Baik",
+          notes: "Aktif dalam pembinaan perilaku hidup bersih dan sehat di lingkungan sekolah.",
+        },
+      ],
+    }));
+  };
+
+  const handleRemoveExtracurricular = (index: number) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      extracurriculars: prev.extracurriculars.filter((_, idx) => idx !== index),
+    }));
+  };
+
+  const handleSaveNewReport = async () => {
+    if (!createForm.fullName.trim()) {
+      setCreateErrorMsg("Nama lengkap peserta didik wajib diisi.");
+      setCreateTab("identitas");
+      return;
+    }
+    if (!createForm.registrationNumber.trim()) {
+      setCreateErrorMsg("Nomor registrasi siswa wajib diisi.");
+      setCreateTab("identitas");
+      return;
+    }
+
+    setIsCreating(true);
+    setCreateErrorMsg(null);
+
+    try {
+      const res = await fetch("/api/admin/nilai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createForm),
+      });
+      const json = await res.json();
+
+      if (res.ok && json.success && json.data) {
+        const created: StudentReportDetail = json.data;
+        setIsCreateModalOpen(false);
+        setSaveSuccessMsg(`Rapor untuk siswa ${created.fullName} berhasil dibuat dan diterbitkan!`);
+
+        // Masukkan data baru ke daftar ringkasan siswa
+        setStudents((prev) => [
+          {
+            registrationNumber: created.registrationNumber,
+            fullName: created.fullName,
+            className: created.className,
+            semester: created.semester,
+            gpa: created.gpa,
+            rank: created.rank,
+            status: created.status,
+          },
+          ...prev.filter((s) => s.registrationNumber !== created.registrationNumber),
+        ]);
+
+        // Tampilkan langsung modal preview rapor siswa yang baru dibuat
+        setSelectedStudent(created);
+        setEditForm(JSON.parse(JSON.stringify(created)));
+        setIsEditing(false);
+        setActiveTab("nilai");
+
+        setTimeout(() => setSaveSuccessMsg(null), 5000);
+      } else {
+        setCreateErrorMsg(json.message || "Gagal membuat rapor siswa baru.");
+      }
+    } catch {
+      setCreateErrorMsg("Terjadi gangguan jaringan saat membuat rapor.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const handleViewDetail = async (regNumber: string, autoPrint = false) => {
     setIsLoadingDetail(true);
     setSaveSuccessMsg(null);
     try {
-      // Prioritaskan endpoint admin nilai
       let res = await fetch(`/api/admin/nilai/${encodeURIComponent(regNumber)}`);
       let json = await res.json();
 
-      // Fallback ke endpoint siswa bila perlu
       if (!res.ok || !json.success) {
         res = await fetch(`/api/siswa/nilai/${encodeURIComponent(regNumber)}`);
         json = await res.json();
@@ -148,7 +456,6 @@ export default function AdminNilaiPage() {
         setActiveTab("nilai");
 
         if (autoPrint) {
-          // Berikan jeda sejenak agar DOM render selesai sebelum memanggil dialog print PDF
           setTimeout(() => {
             window.print();
           }, 350);
@@ -234,7 +541,6 @@ export default function AdminNilaiPage() {
         setIsEditing(false);
         setSaveSuccessMsg("Nilai dan catatan rapor berhasil disimpan ke sistem!");
 
-        // Perbarui juga data ringkasan di daftar tabel siswa
         setStudents((prev) =>
           prev.map((s) =>
             s.registrationNumber === json.data.registrationNumber
@@ -259,7 +565,7 @@ export default function AdminNilaiPage() {
     }
   };
 
-  // Ekspor Rekap Nilai ke format CSV dengan proteksi formula injection (CWE-1236)
+  // Ekspor Rekap Nilai ke format CSV
   const handleExportCsv = () => {
     const safeStudents = Array.isArray(students) ? students : [];
     if (safeStudents.length === 0) {
@@ -301,7 +607,6 @@ export default function AdminNilaiPage() {
     URL.revokeObjectURL(url);
   };
 
-  // Safe guarded list to prevent runtime type errors
   const safeStudents = Array.isArray(students) ? students : [];
   const filteredStudents = safeStudents.filter((s) => {
     if (!s) return false;
@@ -318,6 +623,12 @@ export default function AdminNilaiPage() {
       ? (safeStudents.reduce((acc, curr) => acc + (Number(curr?.gpa) || 0), 0) / safeStudents.length).toFixed(1)
       : "88.5";
 
+  // Hitung GPA sementara pada formulir pembuatan rapor baru
+  const createSubjectsTotal = createForm.subjects.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0);
+  const createGpa = createForm.subjects.length > 0
+    ? (createSubjectsTotal / createForm.subjects.length).toFixed(1)
+    : "0.0";
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* 1. Header Kontrol Dashboard (Disembunyikan saat cetak PDF) */}
@@ -333,11 +644,18 @@ export default function AdminNilaiPage() {
               Manajemen Nilai & Rapor Digital
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Tinjau capaian kompetensi pembelajaran Kurikulum Merdeka, perbarui capaian, dan cetak langsung Rapor resmi berformat PDF.
+              Buat rapor baru secara langsung, tinjau capaian kompetensi pembelajaran Kurikulum Merdeka, dan cetak Rapor resmi berformat PDF.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Button
+              onClick={handleOpenCreateModal}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm gap-2 shadow-md shadow-blue-500/20"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Buat Rapor Baru</span>
+            </Button>
             <Button
               onClick={handleExportCsv}
               variant="outline"
@@ -353,6 +671,22 @@ export default function AdminNilaiPage() {
             </div>
           </div>
         </div>
+
+        {/* Global Success Notification Alert */}
+        {saveSuccessMsg && (
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+              <span>{saveSuccessMsg}</span>
+            </div>
+            <button
+              onClick={() => setSaveSuccessMsg(null)}
+              className="text-emerald-700 hover:text-emerald-900"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Error Notification Banner if loading fails */}
         {errorMessage && (
@@ -473,8 +807,8 @@ export default function AdminNilaiPage() {
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400">
                       Tidak ada data siswa yang cocok dengan kata kunci pencarian.
-                      {search && (
-                        <div className="mt-2">
+                      <div className="mt-3 flex items-center justify-center gap-2">
+                        {search && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -483,8 +817,16 @@ export default function AdminNilaiPage() {
                           >
                             Reset Pencarian
                           </Button>
-                        </div>
-                      )}
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={handleOpenCreateModal}
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-xl gap-1.5"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Buat Rapor Baru Sekarang</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -544,7 +886,575 @@ export default function AdminNilaiPage() {
         </Card>
       </div>
 
-      {/* 5. MODAL INTERAKTIF: Detail & Edit Rapor Digital Siswa */}
+      {/* 5. MODAL FORMULIR: Buat Rapor Baru Langsung di Website */}
+      {isCreateModalOpen && (
+        <div className="print:hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
+                  <UserPlus className="h-6 w-6 text-amber-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full">
+                      Formulir Pembuatan Rapor Baru
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      Kurikulum Merdeka
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-black text-slate-900 mt-0.5">
+                    Buat Rapor Siswa Baru
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Input capaian hasil belajar, mata pelajaran, presensi, dan terbitkan rapor secara instan.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex flex-col items-end">
+                  <span className="text-[10px] font-bold uppercase text-slate-400">Rata-Rata Sementara</span>
+                  <span className="text-xl font-black text-blue-600">{createGpa}</span>
+                </div>
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="w-9 h-9 rounded-xl hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors"
+                  aria-label="Tutup"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Error Message if create fails */}
+            {createErrorMsg && (
+              <div className="p-4 bg-rose-50 border-b border-rose-200 text-rose-800 text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                <span>{createErrorMsg}</span>
+              </div>
+            )}
+
+            {/* Modal Tabs Navigation */}
+            <div className="flex items-center gap-2 px-6 border-b border-slate-100 bg-white text-xs font-bold">
+              <button
+                onClick={() => setCreateTab("identitas")}
+                className={`py-3 px-3.5 border-b-2 flex items-center gap-1.5 transition-colors ${
+                  createTab === "identitas"
+                    ? "border-blue-600 text-blue-600 font-extrabold"
+                    : "border-transparent text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                <UserCheck className="h-4 w-4" />
+                <span>1. Identitas Peserta Didik</span>
+              </button>
+              <button
+                onClick={() => setCreateTab("nilai")}
+                className={`py-3 px-3.5 border-b-2 flex items-center gap-1.5 transition-colors ${
+                  createTab === "nilai"
+                    ? "border-blue-600 text-blue-600 font-extrabold"
+                    : "border-transparent text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>2. Nilai Mata Pelajaran ({createForm.subjects.length})</span>
+              </button>
+              <button
+                onClick={() => setCreateTab("tambahan")}
+                className={`py-3 px-3.5 border-b-2 flex items-center gap-1.5 transition-colors ${
+                  createTab === "tambahan"
+                    ? "border-blue-600 text-blue-600 font-extrabold"
+                    : "border-transparent text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                <Calendar className="h-4 w-4" />
+                <span>3. Ekskul, Kehadiran & Catatan</span>
+              </button>
+            </div>
+
+            {/* Modal Body / Tab Contents */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-6">
+              {/* Tab 1: Identitas Siswa */}
+              {createTab === "identitas" && (
+                <div className="space-y-6">
+                  {/* Pilihan Siswa dari PPDB jika tersedia */}
+                  {availableStudents.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                          <Sparkles className="h-4 w-4 text-blue-600" />
+                          <span>Pilih Siswa dari Data Pendaftar PPDB (Otomatis Isi):</span>
+                        </label>
+                        <span className="text-[11px] text-blue-600 font-medium">
+                          {availableStudents.length} siswa ditemukan
+                        </span>
+                      </div>
+                      <select
+                        onChange={(e) => handleSelectPPDBStudent(e.target.value)}
+                        className="w-full text-xs sm:text-sm p-2.5 rounded-xl border border-blue-200 bg-white focus:outline-blue-600 font-medium text-slate-800"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>
+                          -- Pilih Calon Siswa Terdaftar di PPDB --
+                        </option>
+                        {availableStudents.map((s) => (
+                          <option key={s.registrationNumber} value={s.registrationNumber}>
+                            {s.fullName} ({s.registrationNumber}) - {s.className}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Nama Lengkap Siswa *</label>
+                      <Input
+                        placeholder="Contoh: Muhammad Rafif Pratama"
+                        value={createForm.fullName}
+                        onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+                        className="h-10 text-xs sm:text-sm rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700">Nomor Registrasi PPDB *</label>
+                        <button
+                          type="button"
+                          onClick={handleGenerateRegNumber}
+                          className="text-[11px] text-blue-600 font-semibold hover:underline"
+                        >
+                          Acak Nomor Baru
+                        </button>
+                      </div>
+                      <Input
+                        placeholder="Contoh: PPDB-2025-00001"
+                        value={createForm.registrationNumber}
+                        onChange={(e) => setCreateForm({ ...createForm, registrationNumber: e.target.value })}
+                        className="h-10 text-xs sm:text-sm font-mono rounded-xl uppercase"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Nomor Induk Siswa Nasional (NISN)</label>
+                      <Input
+                        placeholder="Contoh: 0128938129"
+                        value={createForm.nisn}
+                        onChange={(e) => setCreateForm({ ...createForm, nisn: e.target.value })}
+                        className="h-10 text-xs sm:text-sm font-mono rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Kelas & Rombongan Belajar</label>
+                      <select
+                        value={createForm.className}
+                        onChange={(e) => setCreateForm({ ...createForm, className: e.target.value })}
+                        className="w-full h-10 text-xs sm:text-sm px-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 font-medium"
+                      >
+                        <option value="Kelas 1 (Fase A) - Merdeka">Kelas 1 (Fase A) - Merdeka</option>
+                        <option value="Kelas 2 (Fase A) - Merdeka">Kelas 2 (Fase A) - Merdeka</option>
+                        <option value="Kelas 3 (Fase B) - Merdeka">Kelas 3 (Fase B) - Merdeka</option>
+                        <option value="Kelas 4 (Fase B) - Merdeka">Kelas 4 (Fase B) - Merdeka</option>
+                        <option value="Kelas 5 (Fase C) - Merdeka">Kelas 5 (Fase C) - Merdeka</option>
+                        <option value="Kelas 6 (Fase C) - Merdeka">Kelas 6 (Fase C) - Merdeka</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Semester</label>
+                      <select
+                        value={createForm.semester}
+                        onChange={(e) => setCreateForm({ ...createForm, semester: e.target.value })}
+                        className="w-full h-10 text-xs sm:text-sm px-3 rounded-xl border border-slate-200 bg-white focus:outline-blue-600 font-medium"
+                      >
+                        <option value="Semester Ganjil">Semester Ganjil</option>
+                        <option value="Semester Genap">Semester Genap</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Tahun Ajaran</label>
+                      <Input
+                        placeholder="Contoh: 2024/2025"
+                        value={createForm.academicYear}
+                        onChange={(e) => setCreateForm({ ...createForm, academicYear: e.target.value })}
+                        className="h-10 text-xs sm:text-sm rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">Wali Kelas</label>
+                      <Input
+                        placeholder="Nama Guru Wali Kelas"
+                        value={createForm.homeroomTeacher}
+                        onChange={(e) => setCreateForm({ ...createForm, homeroomTeacher: e.target.value })}
+                        className="h-10 text-xs sm:text-sm rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700">NIP Wali Kelas</label>
+                      <Input
+                        placeholder="NIP Guru Wali Kelas"
+                        value={createForm.homeroomTeacherNip}
+                        onChange={(e) => setCreateForm({ ...createForm, homeroomTeacherNip: e.target.value })}
+                        className="h-10 text-xs sm:text-sm font-mono rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      onClick={() => setCreateTab("nilai")}
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs gap-1.5"
+                    >
+                      <span>Lanjut ke Nilai Mata Pelajaran &rarr;</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Nilai Mata Pelajaran */}
+              {createTab === "nilai" && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-xs sm:text-sm">
+                        Muatan Mata Pelajaran Kurikulum Merdeka
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Sesuaikan angka nilai asesmen sumatif/formatif (0 - 100). Predikat dihitung secara otomatis.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleAddSubjectToCreateForm}
+                      className="text-xs rounded-xl gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>Tambah Mata Pelajaran</span>
+                    </Button>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-xs sm:text-sm">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase">
+                        <tr>
+                          <th className="py-3 px-3.5 w-10 text-center">No</th>
+                          <th className="py-3 px-3.5 w-56">Muatan Mata Pelajaran</th>
+                          <th className="py-3 px-3.5 text-center w-16">KKM</th>
+                          <th className="py-3 px-3.5 text-center w-24">Nilai Akhir</th>
+                          <th className="py-3 px-3.5 text-center w-16">Predikat</th>
+                          <th className="py-3 px-3.5">Deskripsi Capaian Kompetensi Belajar</th>
+                          <th className="py-3 px-3.5 w-10 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {createForm.subjects.map((sub, idx) => (
+                          <tr key={sub.code + idx} className="hover:bg-slate-50/70">
+                            <td className="py-3 px-3.5 text-center font-mono text-slate-400">
+                              {idx + 1}
+                            </td>
+                            <td className="py-3 px-3.5 font-bold text-slate-900">
+                              <Input
+                                value={sub.name}
+                                onChange={(e) => {
+                                  const updated = [...createForm.subjects];
+                                  updated[idx] = { ...updated[idx], name: e.target.value };
+                                  setCreateForm({ ...createForm, subjects: updated });
+                                }}
+                                className="h-8 text-xs font-bold rounded-lg"
+                              />
+                              <span className="block text-[10px] font-mono text-slate-400 mt-1">
+                                Kode: {sub.code}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3.5 text-center">
+                              <Input
+                                type="number"
+                                value={sub.kkm}
+                                onChange={(e) => {
+                                  const updated = [...createForm.subjects];
+                                  updated[idx] = { ...updated[idx], kkm: parseInt(e.target.value) || 75 };
+                                  setCreateForm({ ...createForm, subjects: updated });
+                                }}
+                                className="w-14 text-center text-xs h-8 rounded-lg mx-auto"
+                              />
+                            </td>
+                            <td className="py-3 px-3.5 text-center">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={sub.score}
+                                onChange={(e) => handleCreateScoreChange(idx, parseInt(e.target.value))}
+                                className="w-16 text-center font-black text-sm h-8 rounded-lg mx-auto"
+                              />
+                            </td>
+                            <td className="py-3 px-3.5 text-center">
+                              <span
+                                className={`inline-block px-2.5 py-0.5 font-bold rounded-lg text-xs ${
+                                  sub.predicate === "A"
+                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                    : "bg-blue-100 text-blue-800 border border-blue-200"
+                                }`}
+                              >
+                                {sub.predicate}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3.5">
+                              <textarea
+                                value={sub.competencyDesc}
+                                onChange={(e) => handleCreateCompetencyDescChange(idx, e.target.value)}
+                                rows={2}
+                                className="w-full text-xs p-2 rounded-lg border border-slate-200 focus:outline-blue-600 resize-y"
+                              />
+                            </td>
+                            <td className="py-3 px-3.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSubjectFromCreateForm(idx)}
+                                className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                                title="Hapus mata pelajaran"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCreateTab("identitas")}
+                      className="rounded-xl text-xs"
+                    >
+                      &larr; Kembali ke Identitas
+                    </Button>
+                    <Button
+                      onClick={() => setCreateTab("tambahan")}
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs gap-1.5"
+                    >
+                      <span>Lanjut ke Ekskul & Catatan &rarr;</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Ekskul, Kehadiran & Catatan */}
+              {createTab === "tambahan" && (
+                <div className="space-y-6">
+                  {/* Kegiatan Ekstrakurikuler */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900 text-sm">
+                        Kegiatan Ekstrakurikuler yang Diikuti
+                      </h4>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAddExtracurricular}
+                        className="text-xs rounded-xl gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Tambah Ekskul</span>
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {createForm.extracurriculars.map((e, idx) => (
+                        <div
+                          key={idx}
+                          className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-2 relative"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <Input
+                              value={e.name}
+                              onChange={(ev) => {
+                                const updated = [...createForm.extracurriculars];
+                                updated[idx] = { ...updated[idx], name: ev.target.value };
+                                setCreateForm({ ...createForm, extracurriculars: updated });
+                              }}
+                              placeholder="Nama Ekstrakurikuler"
+                              className="h-8 text-xs font-bold rounded-lg bg-white"
+                            />
+                            <select
+                              value={e.predicate}
+                              onChange={(ev) => {
+                                const updated = [...createForm.extracurriculars];
+                                updated[idx] = { ...updated[idx], predicate: ev.target.value };
+                                setCreateForm({ ...createForm, extracurriculars: updated });
+                              }}
+                              className="h-8 text-xs px-2 rounded-lg border border-slate-200 bg-white font-semibold"
+                            >
+                              <option value="Sangat Baik">Sangat Baik</option>
+                              <option value="Baik">Baik</option>
+                              <option value="Cukup">Cukup</option>
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExtracurricular(idx)}
+                              className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                              title="Hapus"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <Input
+                            value={e.notes}
+                            onChange={(ev) => {
+                              const updated = [...createForm.extracurriculars];
+                              updated[idx] = { ...updated[idx], notes: ev.target.value };
+                              setCreateForm({ ...createForm, extracurriculars: updated });
+                            }}
+                            placeholder="Catatan perkembangan atau keikutsertaan ekskul..."
+                            className="h-8 text-xs rounded-lg bg-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Rekapitulasi Presensi / Kehadiran */}
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-slate-900 text-sm">
+                      Rekapitulasi Presensi / Kehadiran Siswa
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                        <div className="text-xs text-slate-500 font-semibold">Sakit (S)</div>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={createForm.attendance.sakit}
+                          onChange={(e) =>
+                            setCreateForm({
+                              ...createForm,
+                              attendance: {
+                                ...createForm.attendance,
+                                sakit: parseInt(e.target.value) || 0,
+                              },
+                            })
+                          }
+                          className="w-20 text-center font-black text-lg h-10 mx-auto mt-2 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                        <div className="text-xs text-slate-500 font-semibold">Izin (I)</div>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={createForm.attendance.izin}
+                          onChange={(e) =>
+                            setCreateForm({
+                              ...createForm,
+                              attendance: {
+                                ...createForm.attendance,
+                                izin: parseInt(e.target.value) || 0,
+                              },
+                            })
+                          }
+                          className="w-20 text-center font-black text-lg h-10 mx-auto mt-2 rounded-lg bg-white"
+                        />
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                        <div className="text-xs text-slate-500 font-semibold">Tanpa Keterangan (A)</div>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={createForm.attendance.tanpaKeterangan}
+                          onChange={(e) =>
+                            setCreateForm({
+                              ...createForm,
+                              attendance: {
+                                ...createForm.attendance,
+                                tanpaKeterangan: parseInt(e.target.value) || 0,
+                              },
+                            })
+                          }
+                          className="w-20 text-center font-black text-lg h-10 mx-auto mt-2 rounded-lg bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Catatan Wali Kelas */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700">Catatan dan Saran Wali Kelas:</label>
+                    <textarea
+                      value={createForm.teacherNotes}
+                      onChange={(e) => setCreateForm({ ...createForm, teacherNotes: e.target.value })}
+                      rows={3}
+                      className="w-full text-xs sm:text-sm p-3 rounded-xl border border-slate-200 focus:outline-blue-600 bg-white leading-relaxed"
+                      placeholder="Tuliskan catatan kemajuan dan dorongan motivasi belajar peserta didik..."
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCreateTab("nilai")}
+                      className="rounded-xl text-xs"
+                    >
+                      &larr; Kembali ke Nilai
+                    </Button>
+                    <Button
+                      onClick={handleSaveNewReport}
+                      disabled={isCreating}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs gap-1.5 shadow-sm font-bold"
+                    >
+                      {isCreating ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                      <span>Terbitkan & Simpan Rapor Sekarang</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <span className="text-xs text-slate-500">
+                Data akan tersimpan permanen di database rapor sekolah.
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="rounded-xl text-xs"
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={handleSaveNewReport}
+                  disabled={isCreating}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs gap-1.5 shadow-sm font-bold"
+                >
+                  {isCreating ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  <span>Terbitkan Rapor</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. MODAL INTERAKTIF: Detail & Edit Rapor Digital Siswa Terpilih */}
       {selectedStudent && (
         <div className="print:hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
@@ -966,7 +1876,7 @@ export default function AdminNilaiPage() {
         </div>
       )}
 
-      {/* 6. DOKUMEN CETAK RESMI RAPOR SISWA (Hanya Ditampilkan Saat Cetak PDF: window.print) */}
+      {/* 7. DOKUMEN CETAK RESMI RAPOR SISWA (Hanya Ditampilkan Saat Cetak PDF: window.print) */}
       {selectedStudent && (
         <div id="rapor-cetak-pdf" className="hidden print:block print:m-0 print:p-0 bg-white text-slate-950 font-sans">
           {/* KOP RESMI SEKOLAH STANDAR DINAS PENDIDIKAN */}

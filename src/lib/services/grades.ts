@@ -41,7 +41,7 @@ export interface StudentReport {
   updatedAt: string;
 }
 
-const DEFAULT_CURRICULUM_SUBJECTS = [
+export const DEFAULT_CURRICULUM_SUBJECTS = [
   {
     code: "PAI",
     name: "Pendidikan Agama dan Budi Pekerti",
@@ -297,4 +297,131 @@ export async function updateStudentReport(
 
   studentReportsStore.set(cleanReg, updated);
   return updated;
+}
+
+/**
+ * Membuat rapor siswa baru secara langsung oleh Guru / Administrator
+ */
+export async function createStudentReport(
+  reportData: Partial<StudentReport>
+): Promise<StudentReport> {
+  const cleanReg = (reportData.registrationNumber || "").trim().toUpperCase();
+  if (!cleanReg) {
+    throw new Error("Nomor registrasi siswa wajib diisi.");
+  }
+  if (!reportData.fullName || !reportData.fullName.trim()) {
+    throw new Error("Nama lengkap siswa wajib diisi.");
+  }
+
+  const subjects: SubjectGrade[] =
+    reportData.subjects && reportData.subjects.length > 0
+      ? reportData.subjects.map((s) => {
+          const score = Math.max(0, Math.min(100, Number(s.score) || 0));
+          return {
+            code: s.code || "MAPEL",
+            name: s.name,
+            kkm: Number(s.kkm) || 75,
+            score,
+            predicate: s.predicate || getPredicate(score),
+            competencyDesc:
+              s.competencyDesc ||
+              `Menunjukkan capaian pemahaman yang baik dalam pembelajaran muatan ${s.name}.`,
+          };
+        })
+      : DEFAULT_CURRICULUM_SUBJECTS.map((sub) => ({
+          code: sub.code,
+          name: sub.name,
+          kkm: sub.kkm,
+          score: sub.baseScore,
+          predicate: getPredicate(sub.baseScore),
+          competencyDesc: sub.competencyDesc,
+        }));
+
+  const totalScore = subjects.reduce((acc, curr) => acc + curr.score, 0);
+  const gpa = subjects.length > 0 ? Math.round((totalScore / subjects.length) * 10) / 10 : 85;
+
+  const currentCount = studentReportsStore.size;
+  const rank = reportData.rank || `${Math.min(28, currentCount + 1)} dari 28 siswa`;
+
+  const newReport: StudentReport = {
+    registrationNumber: cleanReg,
+    fullName: reportData.fullName.trim(),
+    nisn: reportData.nisn ? reportData.nisn.trim() : `012${Math.floor(1000000 + Math.random() * 9000000)}`,
+    className: reportData.className?.trim() || "Kelas 1 (Fase A) - Merdeka",
+    semester: reportData.semester || "Semester Ganjil",
+    academicYear: reportData.academicYear || "2024/2025",
+    phase: reportData.phase || "Fase A (Kelas 1 - 2 SD)",
+    homeroomTeacher: reportData.homeroomTeacher?.trim() || "Hj. Nurul Aini, S.Pd., M.Pd.",
+    homeroomTeacherNip: reportData.homeroomTeacherNip?.trim() || "19820415 200801 2 009",
+    gpa,
+    rank,
+    totalSubjects: subjects.length,
+    status: reportData.status || "Tuntas Seluruh Capaian Pembelajaran",
+    attendance: {
+      sakit: Number(reportData.attendance?.sakit) || 0,
+      izin: Number(reportData.attendance?.izin) || 0,
+      tanpaKeterangan: Number(reportData.attendance?.tanpaKeterangan) || 0,
+    },
+    extracurriculars:
+      reportData.extracurriculars && reportData.extracurriculars.length > 0
+        ? reportData.extracurriculars
+        : [
+            {
+              name: "Pramuka Siaga",
+              predicate: "Sangat Baik",
+              notes: "Disiplin, rajin mengikuti latihan mingguan, dan mandiri.",
+            },
+            {
+              name: "Seni Musik & Tari Tradisional",
+              predicate: "Baik",
+              notes: "Mampu mengikuti ritme irama musik dengan harmonis.",
+            },
+          ],
+    teacherNotes:
+      reportData.teacherNotes?.trim() ||
+      "Ananda memiliki motivasi belajar yang tinggi, berakhlak mulia, dan aktif saat pembelajaran di kelas. Pertahankan semangat belajarmu!",
+    subjects,
+    updatedAt: new Date().toISOString(),
+  };
+
+  studentReportsStore.set(cleanReg, newReport);
+  return newReport;
+}
+
+/**
+ * Mengambil daftar calon siswa dari PPDB yang dapat dibuatkan rapor
+ */
+export async function getAvailableStudentsForReport(): Promise<
+  Array<{
+    registrationNumber: string;
+    fullName: string;
+    nisn: string;
+    className: string;
+  }>
+> {
+  const result: Array<{
+    registrationNumber: string;
+    fullName: string;
+    nisn: string;
+    className: string;
+  }> = [];
+
+  try {
+    const { getPPDBRegistrations } = await import("@/lib/storage/db");
+    const ppdb = getPPDBRegistrations({ limit: 100 });
+    if (ppdb && Array.isArray(ppdb.data)) {
+      for (const reg of ppdb.data) {
+        result.push({
+          registrationNumber: reg.registrationNumber,
+          fullName: reg.fullName,
+          nisn: `012${(reg.nik || "").slice(-6) || "789123"}`,
+          className: "Kelas 1 (Fase A) - Merdeka",
+        });
+      }
+    }
+  } catch {
+    // Abaikan jika tidak tersedia
+  }
+
+  return result;
 }

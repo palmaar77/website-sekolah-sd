@@ -3,8 +3,10 @@ import { requireAuth } from "@/lib/auth/session";
 import {
   getAllStudentsReportsSummary,
   updateStudentReport,
+  createStudentReport,
+  getAvailableStudentsForReport,
 } from "@/lib/services/grades";
-import { apiSuccess, handleApiError } from "@/lib/api-response";
+import { apiCreated, apiSuccess, apiBadRequest, handleApiError } from "@/lib/api-response";
 import { sanitizeObject } from "@/lib/security/sanitize";
 
 /**
@@ -15,7 +17,10 @@ import { sanitizeObject } from "@/lib/security/sanitize";
 export async function GET() {
   try {
     const session = await requireAuth(["SUPER_ADMIN", "ADMIN", "STAFF"]);
-    const summary = await getAllStudentsReportsSummary();
+    const [summary, availableStudents] = await Promise.all([
+      getAllStudentsReportsSummary(),
+      getAvailableStudentsForReport(),
+    ]);
 
     return apiSuccess(summary, {
       admin: {
@@ -23,9 +28,35 @@ export async function GET() {
         name: session.name,
         role: session.role,
       },
+      availableStudents,
     });
   } catch (error: unknown) {
     return handleApiError(error, "Gagal mengambil data nilai siswa.");
+  }
+}
+
+/**
+ * POST /api/admin/nilai
+ * Membuat rapor siswa baru secara langsung oleh Guru & Administrator
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const session = await requireAuth(["SUPER_ADMIN", "ADMIN", "STAFF"]);
+    const body = await request.json();
+    const sanitized = sanitizeObject(body);
+
+    if (!sanitized.fullName || typeof sanitized.fullName !== "string") {
+      return apiBadRequest("Nama lengkap siswa wajib diisi.");
+    }
+    if (!sanitized.registrationNumber || typeof sanitized.registrationNumber !== "string") {
+      return apiBadRequest("Nomor registrasi siswa wajib diisi.");
+    }
+
+    const created = await createStudentReport(sanitized);
+
+    return apiCreated(created, "Rapor peserta didik berhasil dibuat dan diterbitkan.");
+  } catch (error: unknown) {
+    return handleApiError(error, "Gagal membuat rapor baru.");
   }
 }
 
@@ -41,7 +72,7 @@ export async function PUT(request: NextRequest) {
 
     const { registrationNumber, subjects, attendance, extracurriculars, teacherNotes } = sanitized;
     if (!registrationNumber || typeof registrationNumber !== "string") {
-      throw new Error("Nomor registrasi siswa wajib disertakan.");
+      return apiBadRequest("Nomor registrasi siswa wajib disertakan.");
     }
 
     const updated = await updateStudentReport(registrationNumber, {

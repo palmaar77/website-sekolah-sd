@@ -162,6 +162,25 @@ describe("Layanan Nilai Siswa (Kurikulum Merdeka)", () => {
     const recheck = await getStudentReport("PPDB-2025-00001");
     assert.equal(recheck.teacherNotes, "Catatan pengujian terbaru oleh guru.");
   });
+
+  it("harus mampu membuat rapor baru langsung dengan mata pelajaran dan kalkulasi nilai otomatis", async () => {
+    const { createStudentReport, getStudentReport } = await import("../src/lib/services/grades.ts");
+    const testReg = "PPDB-2025-TEST-" + Date.now().toString(36).toUpperCase();
+    const created = await createStudentReport({
+      registrationNumber: testReg,
+      fullName: "Siswa Uji Rapor Baru",
+      className: "Kelas 1 (Fase A) - Merdeka",
+      semester: "Semester Ganjil",
+    });
+
+    assert.equal(created.registrationNumber, testReg);
+    assert.equal(created.fullName, "Siswa Uji Rapor Baru");
+    assert.ok(created.subjects.length >= 8);
+    assert.ok(created.gpa > 0);
+
+    const retrieved = await getStudentReport(testReg);
+    assert.equal(retrieved.fullName, "Siswa Uji Rapor Baru");
+  });
 });
 
 describe("Pembatasan Percobaan Login (Rate Limiter)", () => {
