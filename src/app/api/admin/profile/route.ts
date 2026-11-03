@@ -6,6 +6,7 @@ import { logActivity } from "@/lib/audit";
 import { sanitizeInput, sanitizeObject } from "@/lib/security/sanitize";
 import { apiSuccess, handleApiError } from "@/lib/api-response";
 import { parseGoogleMapsEmbedUrl } from "@/lib/maps";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 export async function GET() {
   try {
@@ -128,16 +129,17 @@ export async function PATCH(request: NextRequest) {
       update: updatePayload,
       create: {
         id: profileId,
-        schoolName: "SD Negeri Harapan Bangsa",
-        npsn: "20109999",
-        accreditation: "A",
-        address: sanitized.address || "Jl. Pendidikan Karakter No. 45",
-        city: "Kota Contoh",
-        province: "Provinsi Contoh",
-        phone: sanitized.phone || "(021) 555-0199",
-        email: sanitized.email || "info@sdharapanbangsa.sch.id",
-        principalName: "Kepala Sekolah",
-        principalMessage: "Selamat datang di sekolah kami.",
+        schoolName: SCHOOL_CONFIG.name,
+        npsn: SCHOOL_CONFIG.npsn,
+        accreditation: SCHOOL_CONFIG.accreditationGrade,
+        address: sanitized.address || SCHOOL_CONFIG.address,
+        city: SCHOOL_CONFIG.city,
+        province: SCHOOL_CONFIG.province,
+        phone: sanitized.phone || SCHOOL_CONFIG.phone,
+        email: sanitized.email || SCHOOL_CONFIG.email,
+        whatsapp: sanitized.whatsapp || SCHOOL_CONFIG.whatsapp,
+        principalName: SCHOOL_CONFIG.principal.name,
+        principalMessage: SCHOOL_CONFIG.principal.message,
         vision: "Cerdas Berkarakter",
         mission: "Pembelajaran Berkualitas",
         goals: "Prestasi Unggul",

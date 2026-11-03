@@ -11,6 +11,11 @@ import {
   Layers,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import {
+  SCHOOL_CONFIG,
+  formatAccreditationText,
+  cleanDemoMarkers,
+} from "@/config/school";
 
 export const metadata = {
   title: "Profil Sekolah",
@@ -91,10 +96,10 @@ export default async function ProfilPage() {
             </div>
             <div className="mt-6 text-center">
               <h3 className="text-base font-extrabold text-slate-900">
-                {profile?.principalName || "Dra. Hj. Siti Rahmawati, M.Pd."}
+                {cleanDemoMarkers(profile?.principalName) || SCHOOL_CONFIG.principal.name}
               </h3>
               <p className="text-xs text-slate-500 font-mono mt-0.5">
-                NIP: {profile?.principalNip || "19750512 200003 2 001"}
+                NIP: {cleanDemoMarkers(profile?.principalNip) || SCHOOL_CONFIG.principal.nip}
               </p>
             </div>
           </div>
@@ -104,31 +109,42 @@ export default async function ProfilPage() {
               Identitas Resmi Sekolah
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-              {profile?.schoolName}
+              {cleanDemoMarkers(profile?.schoolName) || SCHOOL_CONFIG.name}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
                 <span className="text-slate-400 block">NPSN:</span>
-                <span className="font-bold text-slate-900 text-sm">{profile?.npsn}</span>
+                <span className="font-bold text-slate-900 text-sm">
+                  {cleanDemoMarkers(profile?.npsn) || SCHOOL_CONFIG.npsn}
+                </span>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
                 <span className="text-slate-400 block">Status Akreditasi:</span>
-                <span className="font-bold text-slate-900 text-sm">{profile?.accreditation}</span>
+                <span className="font-bold text-slate-900 text-sm">
+                  {formatAccreditationText(profile?.accreditation)}
+                </span>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 sm:col-span-2">
                 <span className="text-slate-400 block">Alamat Lembaga:</span>
                 <span className="font-semibold text-slate-900">
-                  {profile?.address}, {profile?.city}, {profile?.province} {profile?.postalCode}
+                  {cleanDemoMarkers(profile?.address) || SCHOOL_CONFIG.address},{" "}
+                  {cleanDemoMarkers(profile?.city) || SCHOOL_CONFIG.city},{" "}
+                  {cleanDemoMarkers(profile?.province) || SCHOOL_CONFIG.province}{" "}
+                  {profile?.postalCode || SCHOOL_CONFIG.postalCode}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
                 <span className="text-slate-400 block">Telepon Kantor:</span>
-                <span className="font-semibold text-slate-900">{profile?.phone}</span>
+                <span className="font-semibold text-slate-900">
+                  {profile?.phone || SCHOOL_CONFIG.phone}
+                </span>
               </div>
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
                 <span className="text-slate-400 block">Email Resmi:</span>
-                <span className="font-semibold text-slate-900">{profile?.email}</span>
+                <span className="font-semibold text-slate-900">
+                  {profile?.email || SCHOOL_CONFIG.email}
+                </span>
               </div>
             </div>
 

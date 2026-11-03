@@ -24,14 +24,17 @@ import {
 } from "lucide-react";
 import { formatDateIndo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-
-
 import {
   getPPDBSetting,
   getPublishedNews,
   getActiveAnnouncements,
   getGalleries,
 } from "@/lib/storage/db";
+import {
+  SCHOOL_CONFIG,
+  formatAccreditationText,
+  cleanDemoMarkers,
+} from "@/config/school";
 
 export const dynamic = "force-dynamic";
 
@@ -95,11 +98,11 @@ export default async function HomePage() {
   }
 
 
-  const schoolName = profile?.schoolName || "SD Negeri Harapan Bangsa";
+  const schoolName = cleanDemoMarkers(profile?.schoolName) || SCHOOL_CONFIG.name;
   const studentCount = profile?.studentCount || 480;
   const teacherCount = profile?.teacherCount || 28;
   const classroomCount = profile?.classroomCount || 18;
-  const accreditation = profile?.accreditation || "A";
+  const accreditation = profile?.accreditation || SCHOOL_CONFIG.accreditationGrade;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -176,7 +179,7 @@ export default async function HomePage() {
               <div className="pt-4 flex items-center justify-center lg:justify-start gap-6 text-xs text-blue-200">
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  <span>Akreditasi {accreditation} (Unggul)</span>
+                  <span>{formatAccreditationText(profile?.accreditation)}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Shield className="h-4 w-4 text-amber-400" />
@@ -367,9 +370,11 @@ export default async function HomePage() {
               <span className="text-[10px] text-slate-400">Media Digital</span>
             </div>
             <div className="bg-white p-3 rounded-2xl border border-amber-200 shadow-xs flex flex-col items-center text-center">
-              <span className="text-2xl font-black text-amber-500">{accreditation}</span>
+              <span className="text-2xl font-black text-amber-500">
+                {SCHOOL_CONFIG.accreditationGrade}
+              </span>
               <span className="text-xs font-bold text-slate-700 mt-0.5">Akreditasi</span>
-              <span className="text-[10px] text-amber-600 font-semibold">Predikat Unggul</span>
+              <span className="text-[10px] text-amber-600 font-semibold">Predikat {SCHOOL_CONFIG.accreditationPredicate}</span>
             </div>
           </div>
         </div>
@@ -414,12 +419,12 @@ export default async function HomePage() {
 
             <div className="flex flex-col items-center text-center p-2">
               <span className="text-3xl sm:text-4xl font-black text-amber-500 tracking-tight">
-                {accreditation}
+                {SCHOOL_CONFIG.accreditationGrade}
               </span>
               <span className="text-xs sm:text-sm font-bold text-slate-700 mt-1">
                 Akreditasi Nasional
               </span>
-              <span className="text-[11px] text-slate-400 mt-0.5">Predikat Unggul BAN-S/M</span>
+              <span className="text-[11px] text-slate-400 mt-0.5">Predikat {SCHOOL_CONFIG.accreditationPredicate} BAN-S/M</span>
             </div>
           </div>
         </div>

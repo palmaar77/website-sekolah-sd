@@ -1,5 +1,10 @@
 import { apiSuccess } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
+import {
+  SCHOOL_CONFIG,
+  formatAccreditationText,
+  cleanDemoMarkers,
+} from "@/config/school";
 
 export const dynamic = "force-dynamic";
 
@@ -20,41 +25,42 @@ export async function GET() {
 
     if (profile) {
       return apiSuccess({
-        schoolName: profile.schoolName,
-        npsn: profile.npsn,
-        accreditation: profile.accreditation,
-        address: profile.address,
-        city: profile.city,
-        province: profile.province,
-        postalCode: profile.postalCode,
-        phone: profile.phone,
-        email: profile.email,
-        whatsapp: profile.whatsapp,
+        schoolName: cleanDemoMarkers(profile.schoolName) || SCHOOL_CONFIG.name,
+        npsn: cleanDemoMarkers(profile.npsn) || SCHOOL_CONFIG.npsn,
+        accreditation: formatAccreditationText(profile.accreditation),
+        address: cleanDemoMarkers(profile.address) || SCHOOL_CONFIG.address,
+        city: cleanDemoMarkers(profile.city) || SCHOOL_CONFIG.city,
+        province: cleanDemoMarkers(profile.province) || SCHOOL_CONFIG.province,
+        postalCode: profile.postalCode || SCHOOL_CONFIG.postalCode,
+        phone: profile.phone || SCHOOL_CONFIG.phone,
+        email: profile.email || SCHOOL_CONFIG.email,
+        whatsapp: profile.whatsapp || SCHOOL_CONFIG.whatsapp,
         mapEmbedUrl: profile.mapEmbedUrl,
-        facebookUrl: profile.facebookUrl,
-        instagramUrl: profile.instagramUrl,
-        youtubeUrl: profile.youtubeUrl,
+        facebookUrl: profile.facebookUrl || SCHOOL_CONFIG.social.facebook,
+        instagramUrl: profile.instagramUrl || SCHOOL_CONFIG.social.instagram,
+        youtubeUrl: profile.youtubeUrl || SCHOOL_CONFIG.social.youtube,
       });
     }
   } catch {
     // Graceful fallback jika database PostgreSQL sedang offline
   }
 
-  // Data profil sekolah default jika database belum terhubung
+  // Data profil sekolah default berbasis konfigurasi terpusat
   return apiSuccess({
-    schoolName: "SD Negeri Harapan Bangsa",
-    npsn: "20109999",
-    accreditation: "A (Unggul)",
-    address: "Jl. Pendidikan Karakter No. 45, Kompleks Edukasi Bahagia",
-    city: "Kota Contoh",
-    province: "Provinsi Contoh",
-    postalCode: "12345",
-    phone: "(021) 555-0199",
-    email: "info@sdharapanbangsa.sch.id",
-    whatsapp: "081234567890",
-    mapEmbedUrl: "https://maps.google.com/maps?q=Jl.%20Pendidikan%20Karakter%20No.%2045%2C%20Kompleks%20Edukasi%20Bahagia&t=&z=15&ie=UTF8&iwloc=&output=embed",
-    facebookUrl: "https://facebook.com",
-    instagramUrl: "https://instagram.com",
-    youtubeUrl: "https://youtube.com",
+    schoolName: SCHOOL_CONFIG.name,
+    npsn: SCHOOL_CONFIG.npsn,
+    accreditation: SCHOOL_CONFIG.accreditationLabel,
+    address: SCHOOL_CONFIG.address,
+    city: SCHOOL_CONFIG.city,
+    province: SCHOOL_CONFIG.province,
+    postalCode: SCHOOL_CONFIG.postalCode,
+    phone: SCHOOL_CONFIG.phone,
+    email: SCHOOL_CONFIG.email,
+    whatsapp: SCHOOL_CONFIG.whatsapp,
+    mapEmbedUrl:
+      "https://maps.google.com/maps?q=Jl.%20Pendidikan%20Karakter%20No.%2045%2C%20Kompleks%20Edukasi%20Bahagia&t=&z=15&ie=UTF8&iwloc=&output=embed",
+    facebookUrl: SCHOOL_CONFIG.social.facebook,
+    instagramUrl: SCHOOL_CONFIG.social.instagram,
+    youtubeUrl: SCHOOL_CONFIG.social.youtube,
   });
 }

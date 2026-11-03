@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Sparkles,
 } from "lucide-react";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 export const metadata: Metadata = {
   title: "Pusat Login & Portal Layanan Digital | SD Negeri Harapan Bangsa",
@@ -78,7 +79,7 @@ export default function UnifiedLoginPage() {
               <div className="space-y-3 pt-2 border-t border-slate-100 text-xs sm:text-sm text-slate-700">
                 <div className="flex items-start gap-2.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Cek status seleksi & hasil pengumuman PPDB 2025/2026</span>
+                  <span>Cek status seleksi & hasil pengumuman PPDB {SCHOOL_CONFIG.academic.ppdbYear}</span>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <FileText className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />

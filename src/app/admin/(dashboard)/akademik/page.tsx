@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { formatDateIndo } from "@/lib/utils";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 interface CalendarItem {
   id: string;
@@ -49,7 +50,7 @@ export default function AdminAcademicPage() {
   const [isSavingCal, setIsSavingCal] = React.useState(false);
   const [calError, setCalError] = React.useState("");
   const [calSemester, setCalSemester] = React.useState("Ganjil");
-  const [calYear, setCalYear] = React.useState("2025/2026");
+  const [calYear, setCalYear] = React.useState<string>(SCHOOL_CONFIG.academic.currentYear);
   const [calDate, setCalDate] = React.useState("");
   const [calEndDate, setCalEndDate] = React.useState("");
   const [calName, setCalName] = React.useState("");
@@ -368,7 +369,7 @@ export default function AdminAcademicPage() {
                   required
                   value={calYear}
                   onChange={(e) => setCalYear(e.target.value)}
-                  placeholder="Contoh: 2025/2026"
+                  placeholder={`Contoh: ${SCHOOL_CONFIG.academic.currentYear}`}
                 />
               </div>
 

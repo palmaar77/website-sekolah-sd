@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 const DRAFT_STORAGE_KEY = "sd_ppdb_form_draft_v1";
 
@@ -295,7 +296,7 @@ export default function PPDBDaftarPage() {
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Pendaftaran Siswa Baru (PPDB 2025/2026)
+              Pendaftaran Siswa Baru (PPDB {SCHOOL_CONFIG.academic.ppdbYear})
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
               Silakan lengkapi formulir pendaftaran di bawah ini dengan data yang sebenarnya sesuai Kartu Keluarga dan Akta Kelahiran.

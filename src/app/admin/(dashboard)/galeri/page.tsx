@@ -590,7 +590,7 @@ export default function AdminGalleryPage() {
             <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl space-y-1.5">
               <div className="text-[11px] font-bold text-blue-900 flex items-center gap-1">
                 <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                <span>Pilihan Cepat Contoh Foto Kegiatan (1-Klik):</span>
+                <span>Pilihan Cepat Foto Kegiatan Rekomendasi (1-Klik):</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {DEFAULT_SAMPLE_IMAGES.map((sample, idx) => (

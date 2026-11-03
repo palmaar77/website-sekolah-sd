@@ -28,6 +28,11 @@ import {
   getGoogleMapsDirectionsUrl,
   getGoogleMapsSearchUrl,
 } from "@/lib/maps";
+import {
+  SCHOOL_CONFIG,
+  getWhatsAppUrl,
+  cleanDemoMarkers,
+} from "@/config/school";
 
 interface SchoolContactProfile {
   schoolName: string;
@@ -197,16 +202,15 @@ export default function KontakPage() {
   };
 
   // Format Tampilan Data Kontak
-  const schoolName = profile?.schoolName || "SD Negeri Harapan Bangsa";
+  const schoolName = cleanDemoMarkers(profile?.schoolName) || SCHOOL_CONFIG.name;
   const fullAddress = profile?.address
-    ? `${profile.address}${profile.city ? `, ${profile.city}` : ""}${profile.province ? `, ${profile.province}` : ""}${profile.postalCode ? ` ${profile.postalCode}` : ""}`
-    : "Jl. Pendidikan Karakter No. 45, Kompleks Edukasi Bahagia, Kota Contoh, Provinsi Contoh 12345";
-  const phoneDisplay = profile?.phone || "(021) 555-0199";
-  const emailDisplay = profile?.email || "info@sdharapanbangsa.sch.id";
+    ? `${cleanDemoMarkers(profile.address)}${profile.city ? `, ${cleanDemoMarkers(profile.city)}` : ""}${profile.province ? `, ${cleanDemoMarkers(profile.province)}` : ""}${profile.postalCode ? ` ${profile.postalCode}` : ""}`
+    : `${SCHOOL_CONFIG.address}, ${SCHOOL_CONFIG.city}, ${SCHOOL_CONFIG.province} ${SCHOOL_CONFIG.postalCode}`;
+  const phoneDisplay = profile?.phone || SCHOOL_CONFIG.phone;
+  const emailDisplay = profile?.email || SCHOOL_CONFIG.email;
 
-  const rawWa = (profile?.whatsapp || "081234567890").replace(/\D/g, "");
-  const waNumber = rawWa.startsWith("0") ? `62${rawWa.slice(1)}` : rawWa;
-  const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent("Halo Admin SD Harapan Bangsa, saya ingin bertanya seputar informasi sekolah.")}`;
+  const activeWa = profile?.whatsapp || SCHOOL_CONFIG.whatsapp;
+  const waUrl = getWhatsAppUrl("Halo Admin SD Harapan Bangsa, saya ingin bertanya seputar informasi sekolah.", activeWa);
 
   // URL Embed Google Maps yang aktif
   const currentEmbedUrl = parseGoogleMapsEmbedUrl(

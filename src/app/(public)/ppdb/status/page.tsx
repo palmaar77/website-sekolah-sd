@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDateIndo } from "@/lib/utils";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 interface StatusResult {
   registrationNumber: string;
@@ -187,7 +188,7 @@ export default function PPDBStatusPage() {
               required
               value={registrationNumber}
               onChange={(e) => setRegistrationNumber(e.target.value)}
-              placeholder="Contoh: PPDB-2025-A1001"
+              placeholder={`Contoh: ${SCHOOL_CONFIG.academic.ppdbCodePrefix}-XXXXX`}
               helperText="Tercantum pada lembar bukti pendaftaran online"
             />
 
@@ -213,13 +214,10 @@ export default function PPDBStatusPage() {
             </Button>
           </form>
 
-          {/* Quick Demo Hint */}
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600">
-            <span className="font-bold text-slate-900 block mb-1">Contoh Data Pengujian Cepat:</span>
-            <div className="space-y-0.5 font-mono text-[11px] text-slate-500">
-              <div>Nomor: <strong>PPDB-2025-A1001</strong> • WA: <strong>081298765432</strong> (Status: Diterima)</div>
-              <div>Nomor: <strong>PPDB-2025-B2002</strong> • WA: <strong>081311223344</strong> (Status: Sedang Diverifikasi)</div>
-            </div>
+          {/* Petunjuk Pencarian Resmi */}
+          <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-100 text-[11px] text-blue-900 leading-relaxed">
+            <span className="font-bold block mb-0.5">Petunjuk Pencarian:</span>
+            <span>Gunakan nomor registrasi resmi yang Anda peroleh saat mengirim formulir pendaftaran PPDB daring, serta nomor kontak wali yang didaftarkan.</span>
           </div>
 
           {/* Error Message */}

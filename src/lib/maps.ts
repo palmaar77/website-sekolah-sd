@@ -77,3 +77,4 @@ export function getGoogleMapsSearchUrl(locationQuery: string): string {
   const query = (locationQuery || "SD Negeri Harapan Bangsa").trim();
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
+

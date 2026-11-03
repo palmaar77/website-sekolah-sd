@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 export default function StudentLoginPage() {
   const router = useRouter();
@@ -124,7 +125,7 @@ export default function StudentLoginPage() {
                 <Input
                   id="registrationNumber"
                   type="text"
-                  placeholder="Contoh: PPDB-2025-00001"
+                  placeholder={`Contoh: ${SCHOOL_CONFIG.academic.ppdbCodePrefix}-00001`}
                   value={registrationNumber}
                   onChange={(e) => setRegistrationNumber(e.target.value)}
                   className="rounded-xl uppercase font-mono tracking-wide text-sm pl-10"

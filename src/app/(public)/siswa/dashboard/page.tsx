@@ -29,6 +29,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDateIndo } from "@/lib/utils";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 interface StudentData {
   id: string;
@@ -151,7 +152,7 @@ export default function StudentDashboardPage() {
                   Portal Siswa Digital
                 </span>
                 <span className="text-xs text-blue-200">
-                  Tahun Ajaran 2025/2026
+                  Tahun Ajaran {SCHOOL_CONFIG.academic.currentYear}
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1">
@@ -329,7 +330,9 @@ export default function StudentDashboardPage() {
                       <span className="text-[11px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full">
                         Akademik Merdeka
                       </span>
-                      <span className="text-xs text-slate-500">Semester Ganjil 2024/2025</span>
+                      <span className="text-xs text-slate-500">
+                        Semester {SCHOOL_CONFIG.academic.activeSemester} {SCHOOL_CONFIG.academic.currentYear}
+                      </span>
                     </div>
                     <h3 className="text-lg font-extrabold text-slate-900 mt-1">
                       Rapor Digital & Capaian Nilai Siswa

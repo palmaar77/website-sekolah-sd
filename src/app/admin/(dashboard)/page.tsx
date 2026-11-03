@@ -20,6 +20,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDateIndo } from "@/lib/utils";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 interface StatsData {
   newsCount: number;
@@ -215,7 +216,7 @@ export default function AdminDashboardPage() {
           <div>
             <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs tracking-wider uppercase">
               <UserCheck className="h-4 w-4" />
-              <span>Status PPDB 2025/2026 Terkini</span>
+              <span>Status PPDB {SCHOOL_CONFIG.academic.ppdbYear} Terkini</span>
             </div>
             <h2 className="text-xl font-extrabold mt-1">Ringkasan Seleksi Penerimaan Siswa Baru</h2>
             <p className="text-xs text-blue-200 mt-1 max-w-xl">

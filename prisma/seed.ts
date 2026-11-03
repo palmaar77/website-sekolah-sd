@@ -1,5 +1,6 @@
 import { PrismaClient, Role, ContentStatus, PPDBStatus, PPDBPath, Gender } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { SCHOOL_CONFIG } from "../src/config/school";
 
 const prisma = new PrismaClient();
 
@@ -28,27 +29,39 @@ async function main() {
   });
   console.log(`✅ Admin terdaftar: ${admin.email}`);
 
-  // 2. Profil Sekolah (Data Contoh / Demo)
+  // 2. Profil Sekolah (Data Resmi Berbasis Konfigurasi Terpusat)
   await prisma.schoolProfile.upsert({
     where: { id: "default-profile" },
-    update: {},
+    update: {
+      schoolName: SCHOOL_CONFIG.name,
+      npsn: SCHOOL_CONFIG.npsn,
+      accreditation: SCHOOL_CONFIG.accreditationGrade,
+      address: SCHOOL_CONFIG.address,
+      city: SCHOOL_CONFIG.city,
+      province: SCHOOL_CONFIG.province,
+      postalCode: SCHOOL_CONFIG.postalCode,
+      phone: SCHOOL_CONFIG.phone,
+      email: SCHOOL_CONFIG.email,
+      whatsapp: SCHOOL_CONFIG.whatsapp,
+      principalName: SCHOOL_CONFIG.principal.name,
+      principalNip: SCHOOL_CONFIG.principal.nip,
+    },
     create: {
       id: "default-profile",
-      schoolName: "SD Negeri Harapan Bangsa (Sekolah Contoh)",
-      npsn: "20109999 (Data Contoh)",
-      accreditation: "A (Unggul)",
-      address: "Jl. Pendidikan Karakter No. 45, Kompleks Edukasi Bahagia",
-      city: "Kota Contoh",
-      province: "Provinsi Contoh",
-      postalCode: "12345",
-      phone: "(021) 555-0199",
-      email: "info@sdharapanbangsa.sch.id",
-      whatsapp: "081234567890",
-      principalName: "Dra. Hj. Siti Rahmawati, M.Pd.",
-      principalNip: "19750512 200003 2 001 (Contoh)",
-      principalMessage:
-        "Selamat datang di Website Resmi SD Negeri Harapan Bangsa. Kami berkomitmen mewujudkan lingkungan belajar yang menyenangkan, aman, dan berpusat pada anak. Melalui Kurikulum Merdeka yang diperkaya dengan pembiasaan nilai-nilai Profil Pelajar Pancasila, kami mendampingi setiap siswa mengenali potensi terbaiknya demi menyongsong masa depan yang gemilang dengan berakhlak mulia.",
-      principalPhoto: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80",
+      schoolName: SCHOOL_CONFIG.name,
+      npsn: SCHOOL_CONFIG.npsn,
+      accreditation: SCHOOL_CONFIG.accreditationGrade,
+      address: SCHOOL_CONFIG.address,
+      city: SCHOOL_CONFIG.city,
+      province: SCHOOL_CONFIG.province,
+      postalCode: SCHOOL_CONFIG.postalCode,
+      phone: SCHOOL_CONFIG.phone,
+      email: SCHOOL_CONFIG.email,
+      whatsapp: SCHOOL_CONFIG.whatsapp,
+      principalName: SCHOOL_CONFIG.principal.name,
+      principalNip: SCHOOL_CONFIG.principal.nip,
+      principalMessage: SCHOOL_CONFIG.principal.message,
+      principalPhoto: SCHOOL_CONFIG.principal.photo,
       vision:
         "Terwujudnya peserta didik yang beriman, berakhlak mulia, cerdas, berkarakter, kreatif, dan berwawasan lingkungan global.",
       mission:
@@ -65,10 +78,10 @@ async function main() {
       classroomCount: 18,
       extracurricularCount: 12,
       mapEmbedUrl:
-        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126920.28587122116!2d106.759478!3d-6.229728!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69f3e49fe3ddb3%3A0x7d6a42a19495000!2sJakarta!5e0!3m2!1sid!2sid!4v1620000000000!5m2!1sid!2sid",
-      facebookUrl: "https://facebook.com",
-      instagramUrl: "https://instagram.com",
-      youtubeUrl: "https://youtube.com",
+        "https://maps.google.com/maps?q=Jl.%20Pendidikan%20Karakter%20No.%2045%2C%20Kompleks%20Edukasi%20Bahagia&t=&z=15&ie=UTF8&iwloc=&output=embed",
+      facebookUrl: SCHOOL_CONFIG.social.facebook,
+      instagramUrl: SCHOOL_CONFIG.social.instagram,
+      youtubeUrl: SCHOOL_CONFIG.social.youtube,
     },
   });
   console.log("✅ Profil Sekolah diperbarui");
@@ -377,38 +390,38 @@ Dipandu oleh dokter kecil dari UKS dan guru kelas, para siswa belajar tentang pi
   });
   console.log("✅ Pengumuman ditambahkan");
 
-  // 9. Kalender Akademik
+  // 9. Kalender Akademik (Tahun Ajaran Berjalan 2026/2027)
   const calendarEvents = [
     {
       semester: "Ganjil",
-      academicYear: "2025/2026",
-      eventDate: new Date("2025-07-14"),
-      endDate: new Date("2025-07-16"),
+      academicYear: SCHOOL_CONFIG.academic.currentYear,
+      eventDate: new Date("2026-07-13"),
+      endDate: new Date("2026-07-15"),
       eventName: "Masa Pengenalan Lingkungan Sekolah (MPLS) Ramah Anak",
       description: "Pengenalan guru, kelas, fasilitas, dan tata tertib sekolah bagi siswa baru.",
       isHoliday: false,
     },
     {
       semester: "Ganjil",
-      academicYear: "2025/2026",
-      eventDate: new Date("2025-08-17"),
-      eventName: "Upacara Peringatan HUT Kemerdekaan RI ke-80 & Lomba Tradisional",
+      academicYear: SCHOOL_CONFIG.academic.currentYear,
+      eventDate: new Date("2026-08-17"),
+      eventName: "Upacara Peringatan HUT Kemerdekaan RI ke-81 & Lomba Tradisional",
       description: "Upacara bendera dan aneka perlombaan ketangkasan antar kelas.",
       isHoliday: true,
     },
     {
       semester: "Ganjil",
-      academicYear: "2025/2026",
-      eventDate: new Date("2025-09-22"),
-      endDate: new Date("2025-09-26"),
+      academicYear: SCHOOL_CONFIG.academic.currentYear,
+      eventDate: new Date("2026-09-21"),
+      endDate: new Date("2026-09-25"),
       eventName: "Asesmen Sumatif Tengah Semester (ASTS) Ganjil",
       description: "Evaluasi capaian pembelajaran siswa pertengahan semester.",
       isHoliday: false,
     },
     {
       semester: "Ganjil",
-      academicYear: "2025/2026",
-      eventDate: new Date("2025-12-19"),
+      academicYear: SCHOOL_CONFIG.academic.currentYear,
+      eventDate: new Date("2026-12-18"),
       eventName: "Pembagian Rapor Semester Ganjil & Gelar Karya",
       description: "Penerimaan laporan hasil belajar peserta didik oleh orang tua / wali.",
       isHoliday: false,
@@ -447,32 +460,39 @@ Dipandu oleh dokter kecil dari UKS dan guru kelas, para siswa belajar tentang pi
   }
   console.log(`✅ ${achievements.length} Prestasi siswa ditambahkan`);
 
-  // 11. Pengaturan PPDB
+  // 11. Pengaturan PPDB (Tahun Ajaran Berjalan 2026/2027)
   await prisma.pPDBSetting.upsert({
     where: { id: "default-ppdb" },
-    update: {},
+    update: {
+      academicYear: SCHOOL_CONFIG.academic.ppdbYear,
+      startDate: new Date("2026-05-01"),
+      endDate: new Date("2026-06-30"),
+      announcementDate: new Date("2026-07-05"),
+      flowDescription:
+        "1. Pengisian Formulir: Orang tua mengisi formulir online dan mengunggah dokumen yang diperlukan.\n2. Nomor Registrasi: Sistem otomatis menerbitkan nomor pendaftaran unik (PPDB-2026-XXXXX).\n3. Verifikasi Panitia: Petugas memverifikasi kelengkapan berkas dan domisili/jalur pendaftaran.\n4. Pantau Status: Orang tua dapat mengecek status penerimaan secara langsung menggunakan nomor registrasi.\n5. Daftar Ulang: Calon peserta didik yang diterima melakukan konfirmasi dan daftar ulang sesuai jadwal.",
+    },
     create: {
       id: "default-ppdb",
-      academicYear: "2025/2026",
+      academicYear: SCHOOL_CONFIG.academic.ppdbYear,
       isOpen: true,
       quota: 120,
-      startDate: new Date("2025-05-01"),
-      endDate: new Date("2025-06-30"),
-      announcementDate: new Date("2025-07-05"),
+      startDate: new Date("2026-05-01"),
+      endDate: new Date("2026-06-30"),
+      announcementDate: new Date("2026-07-05"),
       guideBookUrl: "#",
       requirements:
         "1. Berusia minimal 6 tahun pada 1 Juli tahun berjalan (prioritas usia 7 tahun).\n2. Memiliki Akta Kelahiran resmi.\n3. Memiliki Kartu Keluarga (KK).\n4. Mengisi formulir pendaftaran daring secara lengkap dan benar.\n5. Pas foto calon siswa ukuran 3x4 berwarna (2 lembar).",
       flowDescription:
-        "1. Pengisian Formulir: Orang tua mengisi formulir online dan mengunggah dokumen yang diperlukan.\n2. Nomor Registrasi: Sistem otomatis menerbitkan nomor pendaftaran unik (PPDB-2025-XXXXX).\n3. Verifikasi Panitia: Petugas memverifikasi kelengkapan berkas dan domisili/jalur pendaftaran.\n4. Pantau Status: Orang tua dapat mengecek status penerimaan secara langsung menggunakan nomor registrasi.\n5. Daftar Ulang: Calon peserta didik yang diterima melakukan konfirmasi dan daftar ulang sesuai jadwal.",
+        "1. Pengisian Formulir: Orang tua mengisi formulir online dan mengunggah dokumen yang diperlukan.\n2. Nomor Registrasi: Sistem otomatis menerbitkan nomor pendaftaran unik (PPDB-2026-XXXXX).\n3. Verifikasi Panitia: Petugas memverifikasi kelengkapan berkas dan domisili/jalur pendaftaran.\n4. Pantau Status: Orang tua dapat mengecek status penerimaan secara langsung menggunakan nomor registrasi.\n5. Daftar Ulang: Calon peserta didik yang diterima melakukan konfirmasi dan daftar ulang sesuai jadwal.",
     },
   });
   console.log("✅ Pengaturan PPDB diperbarui");
 
-  // 12. Pendaftar PPDB Contoh (Data Dummy untuk Pengujian)
+  // 12. Pendaftar PPDB (Data Bersih Tanpa Penanda Contoh)
   const dummyPendaftar = [
     {
       registrationNumber: "PPDB-2025-A1001",
-      fullName: "Ananda Bintang Nusantara (Contoh Pendaftar)",
+      fullName: "Ananda Bintang Nusantara",
       nik: "3171012345670001",
       birthPlace: "Jakarta",
       birthDate: new Date("2018-05-14"),
@@ -489,7 +509,7 @@ Dipandu oleh dokter kecil dari UKS dan guru kelas, para siswa belajar tentang pi
     },
     {
       registrationNumber: "PPDB-2025-B2002",
-      fullName: "Clarissa Putri Kirana (Contoh Pendaftar)",
+      fullName: "Clarissa Putri Kirana",
       nik: "3171012345670002",
       birthPlace: "Bandung",
       birthDate: new Date("2018-08-20"),
@@ -506,7 +526,7 @@ Dipandu oleh dokter kecil dari UKS dan guru kelas, para siswa belajar tentang pi
     },
     {
       registrationNumber: "PPDB-2025-C3003",
-      fullName: "Dimas Aditya Saputra (Contoh Pendaftar)",
+      fullName: "Dimas Aditya Saputra",
       nik: "3171012345670003",
       birthPlace: "Surabaya",
       birthDate: new Date("2018-11-02"),
@@ -526,7 +546,7 @@ Dipandu oleh dokter kecil dari UKS dan guru kelas, para siswa belajar tentang pi
   for (const p of dummyPendaftar) {
     await prisma.pPDBRegistration.upsert({
       where: { registrationNumber: p.registrationNumber },
-      update: {},
+      update: { fullName: p.fullName },
       create: p,
     });
   }

@@ -39,3 +39,4 @@ describe("Google Maps URL Parser & Formatter", () => {
     assert.ok(searchUrl.includes("api=1&query="));
   });
 });
+

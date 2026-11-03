@@ -13,6 +13,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDateIndo } from "@/lib/utils";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 export const metadata = {
   title: "Akademik & Kurikulum",
@@ -157,7 +158,7 @@ export default async function AkademikPage() {
                   <span>Semester Ganjil</span>
                 </h3>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">
-                  TA {ganjilEvents[0]?.academicYear || "2025/2026"}
+                  TA {ganjilEvents[0]?.academicYear || SCHOOL_CONFIG.academic.currentYear}
                 </span>
               </div>
 
@@ -203,7 +204,7 @@ export default async function AkademikPage() {
                   <span>Semester Genap</span>
                 </h3>
                 <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">
-                  TA {genapEvents[0]?.academicYear || "2025/2026"}
+                  TA {genapEvents[0]?.academicYear || SCHOOL_CONFIG.academic.currentYear}
                 </span>
               </div>
 

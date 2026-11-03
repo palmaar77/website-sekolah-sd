@@ -16,6 +16,7 @@ import {
   Clock,
   ShieldCheck,
 } from "lucide-react";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 const NAV_LINKS = [
   { name: "Beranda", href: "/" },
@@ -65,20 +66,24 @@ export function Navbar() {
           <div className="flex items-center space-x-6">
             <span className="flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5 text-amber-400" />
-              <span>(021) 555-0199</span>
+              <a href={`tel:${SCHOOL_CONFIG.phone}`} className="hover:text-amber-300 transition-colors">
+                {SCHOOL_CONFIG.phone}
+              </a>
             </span>
             <span className="flex items-center gap-1.5">
               <Mail className="h-3.5 w-3.5 text-amber-400" />
-              <span>info@sdharapanbangsa.sch.id</span>
+              <a href={`mailto:${SCHOOL_CONFIG.email}`} className="hover:text-amber-300 transition-colors">
+                {SCHOOL_CONFIG.email}
+              </a>
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-amber-400" />
-              <span>Senin - Jumat: 07.00 - 15.00 WIB</span>
+              <span>{SCHOOL_CONFIG.officeHours}</span>
             </span>
           </div>
           <div className="flex items-center space-x-4">
             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-semibold border border-amber-400/30">
-              NPSN: 20109999 • Akreditasi A
+              NPSN: {SCHOOL_CONFIG.npsn} • {SCHOOL_CONFIG.accreditationLabel}
             </span>
             <div className="flex items-center space-x-3 border-l border-blue-800 pl-3">
               <Link

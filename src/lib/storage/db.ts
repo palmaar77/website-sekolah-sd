@@ -144,17 +144,17 @@ function getInitialSeedData(): DatabaseSchema {
   return {
     ppdbSetting: {
       id: "default-ppdb",
-      academicYear: "2025/2026",
+      academicYear: "2026/2027",
       isOpen: true, // Status layanan aktif
       quota: 120,
-      startDate: "2025-05-01T00:00:00.000Z",
-      endDate: "2025-06-30T23:59:59.000Z",
-      announcementDate: "2025-07-05T08:00:00.000Z",
+      startDate: "2026-05-01T00:00:00.000Z",
+      endDate: "2026-06-30T23:59:59.000Z",
+      announcementDate: "2026-07-05T08:00:00.000Z",
       guideBookUrl: "#",
       requirements:
         "1. Berusia minimal 6 tahun pada 1 Juli tahun berjalan (prioritas usia 7 tahun).\n2. Memiliki Akta Kelahiran resmi.\n3. Memiliki Kartu Keluarga (KK).\n4. Mengisi formulir pendaftaran daring secara lengkap dan benar.\n5. Pas foto calon siswa ukuran 3x4 berwarna (2 lembar).",
       flowDescription:
-        "1. Pengisian Formulir: Orang tua mengisi formulir online dan mengunggah dokumen yang diperlukan.\n2. Nomor Registrasi: Sistem otomatis menerbitkan nomor pendaftaran unik (PPDB-2025-XXXXX).\n3. Verifikasi Panitia: Petugas memverifikasi kelengkapan berkas dan domisili/jalur pendaftaran.\n4. Pantau Status: Orang tua dapat mengecek status penerimaan secara langsung menggunakan nomor registrasi.\n5. Daftar Ulang: Calon peserta didik yang diterima melakukan konfirmasi dan daftar ulang sesuai jadwal.",
+        "1. Pengisian Formulir: Orang tua mengisi formulir online dan mengunggah dokumen yang diperlukan.\n2. Nomor Registrasi: Sistem otomatis menerbitkan nomor pendaftaran unik (PPDB-2026-XXXXX).\n3. Verifikasi Panitia: Petugas memverifikasi kelengkapan berkas dan domisili/jalur pendaftaran.\n4. Pantau Status: Orang tua dapat mengecek status penerimaan secara langsung menggunakan nomor registrasi.\n5. Daftar Ulang: Calon peserta didik yang diterima melakukan konfirmasi dan daftar ulang sesuai jadwal.",
       updatedAt: new Date().toISOString(),
     },
     ppdbRegistrations: [

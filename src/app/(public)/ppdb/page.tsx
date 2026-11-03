@@ -18,9 +18,10 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDateIndo } from "@/lib/utils";
+import { SCHOOL_CONFIG } from "@/config/school";
 
 export const metadata = {
-  title: "Informasi PPDB 2025/2026",
+  title: `Informasi PPDB ${SCHOOL_CONFIG.academic.ppdbYear}`,
   description:
     "Persyaratan, Jadwal, Alur Pendaftaran, dan Kuota Penerimaan Peserta Didik Baru SD Negeri Harapan Bangsa.",
 };
@@ -80,7 +81,7 @@ export default async function PPDBInfoPage() {
         <div className="max-w-7xl mx-auto text-center space-y-5">
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-amber-300 bg-amber-400/20 px-4 py-1.5 rounded-full border border-amber-400/30">
-              Tahun Ajaran {setting?.academicYear || "2025/2026"}
+              Tahun Ajaran {setting?.academicYear || SCHOOL_CONFIG.academic.ppdbYear}
             </span>
             {setting?.isOpen ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-emerald-300 bg-emerald-500/20 px-4 py-1.5 rounded-full border border-emerald-400/30">
@@ -302,7 +303,9 @@ export default async function PPDBInfoPage() {
                 2
               </div>
               <h4 className="font-bold text-sm text-slate-900">Nomor Registrasi</h4>
-              <p className="text-xs text-slate-500">Sistem otomatis menerbitkan kode pendaftaran resmi (PPDB-2025-XXXXX).</p>
+              <p className="text-xs text-slate-500">
+                Sistem otomatis menerbitkan kode pendaftaran resmi ({SCHOOL_CONFIG.academic.ppdbCodePrefix}-XXXXX).
+              </p>
             </div>
 
             <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2">

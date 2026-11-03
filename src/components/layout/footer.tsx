@@ -8,6 +8,7 @@ import {
   ExternalLink,
   ShieldCheck,
 } from "lucide-react";
+import { SCHOOL_CONFIG, getWhatsAppUrl } from "@/config/school";
 
 export function Footer() {
   return (
@@ -29,7 +30,7 @@ export function Footer() {
             </p>
             <div className="pt-2">
               <span className="inline-block bg-blue-950 text-blue-300 text-xs px-3 py-1.5 rounded-lg border border-blue-800 font-semibold">
-                Akreditasi: A (Unggul) • Data Contoh
+                {SCHOOL_CONFIG.accreditationLabel}
               </span>
             </div>
           </div>
@@ -109,7 +110,7 @@ export function Footer() {
             <div className="mt-6 p-3.5 rounded-xl bg-slate-800/80 border border-slate-700">
               <span className="text-xs text-slate-300 block font-medium">Butuh bantuan pendaftaran?</span>
               <a
-                href="https://wa.me/6281234567890"
+                href={getWhatsAppUrl("Halo Panitia PPDB SD Harapan Bangsa, saya ingin bertanya tentang informasi pendaftaran.")}
                 target="_blank"
                 rel="noreferrer"
                 className="mt-1 text-xs text-amber-400 hover:underline inline-flex items-center gap-1 font-semibold"
@@ -128,19 +129,23 @@ export function Footer() {
             <ul className="space-y-3 text-sm text-slate-400">
               <li className="flex items-start gap-2.5">
                 <MapPin className="h-4 w-4 text-amber-400 shrink-0 mt-1" />
-                <span>Jl. Pendidikan Karakter No. 45, Kompleks Edukasi Bahagia</span>
+                <span>{SCHOOL_CONFIG.address}</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-amber-400 shrink-0" />
-                <span>(021) 555-0199</span>
+                <a href={`tel:${SCHOOL_CONFIG.phone}`} className="hover:text-amber-400 transition-colors">
+                  {SCHOOL_CONFIG.phone}
+                </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="h-4 w-4 text-amber-400 shrink-0" />
-                <span>info@sdharapanbangsa.sch.id</span>
+                <a href={`mailto:${SCHOOL_CONFIG.email}`} className="hover:text-amber-400 transition-colors">
+                  {SCHOOL_CONFIG.email}
+                </a>
               </li>
               <li className="flex items-center gap-2.5">
                 <Clock className="h-4 w-4 text-amber-400 shrink-0" />
-                <span>Senin - Jumat: 07.00 - 15.00 WIB</span>
+                <span>{SCHOOL_CONFIG.officeHours}</span>
               </li>
             </ul>
           </div>
