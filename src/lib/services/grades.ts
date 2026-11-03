@@ -105,7 +105,7 @@ const DEFAULT_CURRICULUM_SUBJECTS = [
  */
 const studentReportsStore: Map<string, StudentReport> = new Map();
 
-function getPredicate(score: number): "A" | "B" | "C" | "D" {
+export function getPredicate(score: number): "A" | "B" | "C" | "D" {
   if (score >= 90) return "A";
   if (score >= 80) return "B";
   if (score >= 70) return "C";
@@ -231,6 +231,25 @@ export async function getAllStudentsReportsSummary(): Promise<
     status: string;
   }>
 > {
+  // Sinkronisasi otomatis dengan data pendaftaran PPDB yang ada
+  try {
+    const { getPPDBRegistrations } = await import("@/lib/storage/db");
+    const ppdbResult = getPPDBRegistrations({ limit: 100 });
+    if (ppdbResult && Array.isArray(ppdbResult.data)) {
+      for (const reg of ppdbResult.data) {
+        const cleanReg = (reg.registrationNumber || "").trim().toUpperCase();
+        if (cleanReg && !studentReportsStore.has(cleanReg)) {
+          studentReportsStore.set(
+            cleanReg,
+            createDefaultReportForStudent(cleanReg, reg.fullName || "Peserta Didik")
+          );
+        }
+      }
+    }
+  } catch {
+    // Abaikan jika database storage sedang tidak tersedia
+  }
+
   const list = Array.from(studentReportsStore.values());
   return list.map((r) => ({
     registrationNumber: r.registrationNumber,
@@ -241,4 +260,41 @@ export async function getAllStudentsReportsSummary(): Promise<
     rank: r.rank,
     status: r.status,
   }));
+}
+
+/**
+ * Memperbarui nilai dan catatan rapor siswa (khusus Guru / Admin)
+ */
+export async function updateStudentReport(
+  registrationNumber: string,
+  data: Partial<StudentReport>
+): Promise<StudentReport> {
+  const cleanReg = registrationNumber.trim().toUpperCase();
+  const existing = await getStudentReport(cleanReg);
+
+  const updatedSubjects = data.subjects ? data.subjects.map((s) => ({
+    ...s,
+    predicate: getPredicate(Number(s.score) || 0),
+  })) : existing.subjects;
+
+  const totalScore = updatedSubjects.reduce((acc, curr) => acc + (Number(curr.score) || 0), 0);
+  const gpa = updatedSubjects.length > 0
+    ? Math.round((totalScore / updatedSubjects.length) * 10) / 10
+    : existing.gpa;
+
+  const updated: StudentReport = {
+    ...existing,
+    ...data,
+    registrationNumber: cleanReg,
+    subjects: updatedSubjects,
+    gpa,
+    attendance: {
+      ...existing.attendance,
+      ...(data.attendance || {}),
+    },
+    updatedAt: new Date().toISOString(),
+  };
+
+  studentReportsStore.set(cleanReg, updated);
+  return updated;
 }

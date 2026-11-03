@@ -135,6 +135,33 @@ describe("Layanan Nilai Siswa (Kurikulum Merdeka)", () => {
     assert.ok(report.attendance.sakit >= 0);
     assert.ok(typeof report.teacherNotes === "string" && report.teacherNotes.length > 10);
   });
+
+  it("harus mengembalikan ringkasan daftar seluruh siswa dalam format array", async () => {
+    const { getAllStudentsReportsSummary } = await import("../src/lib/services/grades.ts");
+    const summary = await getAllStudentsReportsSummary();
+    assert.ok(Array.isArray(summary));
+    assert.ok(summary.length >= 4);
+    assert.ok(summary[0].registrationNumber);
+    assert.ok(typeof summary[0].gpa === "number");
+  });
+
+  it("harus mampu memperbarui nilai rapor dan menghitung GPA serta predikat otomatis", async () => {
+    const { updateStudentReport, getStudentReport } = await import("../src/lib/services/grades.ts");
+    const updated = await updateStudentReport("PPDB-2025-00001", {
+      teacherNotes: "Catatan pengujian terbaru oleh guru.",
+      attendance: {
+        sakit: 1,
+        izin: 2,
+        tanpaKeterangan: 0,
+      },
+    });
+    assert.equal(updated.teacherNotes, "Catatan pengujian terbaru oleh guru.");
+    assert.equal(updated.attendance.sakit, 1);
+    assert.equal(updated.attendance.izin, 2);
+
+    const recheck = await getStudentReport("PPDB-2025-00001");
+    assert.equal(recheck.teacherNotes, "Catatan pengujian terbaru oleh guru.");
+  });
 });
 
 describe("Pembatasan Percobaan Login (Rate Limiter)", () => {

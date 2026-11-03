@@ -17,11 +17,16 @@ import {
   AlertCircle,
   TrendingUp,
   UserCheck,
+  Edit3,
+  Save,
+  RotateCcw,
+  RefreshCw,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { sanitizeCsvCell } from "@/lib/security/sanitize";
 
 interface StudentSummary {
   registrationNumber: string;
@@ -71,39 +76,77 @@ interface StudentReportDetail {
   updatedAt: string;
 }
 
+function calculatePredicate(score: number): "A" | "B" | "C" | "D" {
+  if (score >= 90) return "A";
+  if (score >= 80) return "B";
+  if (score >= 70) return "C";
+  return "D";
+}
+
 export default function AdminNilaiPage() {
   const [students, setStudents] = React.useState<StudentSummary[]>([]);
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  // Detail Modal & Edit State
   const [selectedStudent, setSelectedStudent] = React.useState<StudentReportDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState<"nilai" | "ekskul" | "kehadiran">("nilai");
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editForm, setEditForm] = React.useState<StudentReportDetail | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = React.useState<string | null>(null);
+
+  const loadData = React.useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await fetch("/api/admin/nilai");
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        // Robust extraction: support both array and { data: array } format
+        const studentList: StudentSummary[] = Array.isArray(json.data)
+          ? json.data
+          : Array.isArray(json.data.data)
+          ? json.data.data
+          : [];
+        setStudents(studentList);
+      } else {
+        setErrorMessage(json.message || "Gagal memuat daftar nilai siswa.");
+      }
+    } catch (err) {
+      console.error("Gagal memuat nilai admin:", err);
+      setErrorMessage("Terjadi kesalahan jaringan saat memuat data nilai.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        const res = await fetch("/api/admin/nilai");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setStudents(json.data);
-        }
-      } catch (err) {
-        console.error("Gagal memuat nilai admin:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     loadData();
-  }, []);
+  }, [loadData]);
 
   const handleViewDetail = async (regNumber: string, autoPrint = false) => {
     setIsLoadingDetail(true);
+    setSaveSuccessMsg(null);
     try {
-      const res = await fetch(`/api/siswa/nilai/${encodeURIComponent(regNumber)}`);
-      const json = await res.json();
+      // Prioritaskan endpoint admin nilai
+      let res = await fetch(`/api/admin/nilai/${encodeURIComponent(regNumber)}`);
+      let json = await res.json();
+
+      // Fallback ke endpoint siswa bila perlu
+      if (!res.ok || !json.success) {
+        res = await fetch(`/api/siswa/nilai/${encodeURIComponent(regNumber)}`);
+        json = await res.json();
+      }
+
       if (json.success && json.data) {
         setSelectedStudent(json.data);
+        setEditForm(JSON.parse(JSON.stringify(json.data)));
+        setIsEditing(false);
+        setActiveTab("nilai");
+
         if (autoPrint) {
           // Berikan jeda sejenak agar DOM render selesai sebelum memanggil dialog print PDF
           setTimeout(() => {
@@ -125,16 +168,154 @@ export default function AdminNilaiPage() {
     window.print();
   };
 
-  const filteredStudents = students.filter(
-    (s) =>
-      s.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      s.registrationNumber.toLowerCase().includes(search.toLowerCase()) ||
-      s.className.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleScoreChange = (index: number, newScore: number) => {
+    if (!editForm) return;
+    const clampedScore = Math.max(0, Math.min(100, isNaN(newScore) ? 0 : newScore));
+    const updatedSubjects = [...(editForm.subjects || [])];
+    updatedSubjects[index] = {
+      ...updatedSubjects[index],
+      score: clampedScore,
+      predicate: calculatePredicate(clampedScore),
+    };
+
+    const total = updatedSubjects.reduce((acc, curr) => acc + (curr.score || 0), 0);
+    const newGpa = updatedSubjects.length > 0
+      ? Math.round((total / updatedSubjects.length) * 10) / 10
+      : editForm.gpa;
+
+    setEditForm({
+      ...editForm,
+      subjects: updatedSubjects,
+      gpa: newGpa,
+    });
+  };
+
+  const handleCompetencyDescChange = (index: number, desc: string) => {
+    if (!editForm) return;
+    const updatedSubjects = [...(editForm.subjects || [])];
+    updatedSubjects[index] = {
+      ...updatedSubjects[index],
+      competencyDesc: desc,
+    };
+    setEditForm({
+      ...editForm,
+      subjects: updatedSubjects,
+    });
+  };
+
+  const handleAttendanceChange = (field: "sakit" | "izin" | "tanpaKeterangan", val: number) => {
+    if (!editForm) return;
+    const clamped = Math.max(0, isNaN(val) ? 0 : val);
+    setEditForm({
+      ...editForm,
+      attendance: {
+        ...editForm.attendance,
+        [field]: clamped,
+      },
+    });
+  };
+
+  const handleSaveReport = async () => {
+    if (!editForm || !selectedStudent) return;
+    setIsSaving(true);
+    setSaveSuccessMsg(null);
+
+    try {
+      const res = await fetch(`/api/admin/nilai/${encodeURIComponent(editForm.registrationNumber)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const json = await res.json();
+
+      if (res.ok && json.success && json.data) {
+        setSelectedStudent(json.data);
+        setEditForm(JSON.parse(JSON.stringify(json.data)));
+        setIsEditing(false);
+        setSaveSuccessMsg("Nilai dan catatan rapor berhasil disimpan ke sistem!");
+
+        // Perbarui juga data ringkasan di daftar tabel siswa
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.registrationNumber === json.data.registrationNumber
+              ? {
+                  ...s,
+                  gpa: json.data.gpa,
+                  status: json.data.status,
+                  rank: json.data.rank,
+                }
+              : s
+          )
+        );
+
+        setTimeout(() => setSaveSuccessMsg(null), 4000);
+      } else {
+        alert(json.message || "Gagal menyimpan perubahan nilai.");
+      }
+    } catch {
+      alert("Terjadi gangguan koneksi saat menyimpan nilai.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Ekspor Rekap Nilai ke format CSV dengan proteksi formula injection (CWE-1236)
+  const handleExportCsv = () => {
+    const safeStudents = Array.isArray(students) ? students : [];
+    if (safeStudents.length === 0) {
+      alert("Tidak ada data nilai siswa untuk diekspor.");
+      return;
+    }
+
+    const headers = [
+      "No",
+      "Nomor Registrasi",
+      "Nama Lengkap Siswa",
+      "Kelas",
+      "Semester",
+      "Nilai Rata-Rata (GPA)",
+      "Peringkat",
+      "Status Capaian",
+    ];
+
+    const rows = safeStudents.map((s, idx) => [
+      sanitizeCsvCell(idx + 1),
+      sanitizeCsvCell(s.registrationNumber),
+      sanitizeCsvCell(s.fullName),
+      sanitizeCsvCell(s.className),
+      sanitizeCsvCell(s.semester),
+      sanitizeCsvCell(s.gpa),
+      sanitizeCsvCell(s.rank),
+      sanitizeCsvCell(s.status),
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Rekap_Nilai_Siswa_SD_Harapan_Bangsa_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Safe guarded list to prevent runtime type errors
+  const safeStudents = Array.isArray(students) ? students : [];
+  const filteredStudents = safeStudents.filter((s) => {
+    if (!s) return false;
+    const q = search.toLowerCase();
+    return (
+      (s.fullName || "").toLowerCase().includes(q) ||
+      (s.registrationNumber || "").toLowerCase().includes(q) ||
+      (s.className || "").toLowerCase().includes(q)
+    );
+  });
 
   const averageSchoolGpa =
-    students.length > 0
-      ? (students.reduce((acc, curr) => acc + curr.gpa, 0) / students.length).toFixed(1)
+    safeStudents.length > 0
+      ? (safeStudents.reduce((acc, curr) => acc + (Number(curr?.gpa) || 0), 0) / safeStudents.length).toFixed(1)
       : "88.5";
 
   return (
@@ -152,17 +333,45 @@ export default function AdminNilaiPage() {
               Manajemen Nilai & Rapor Digital
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Tinjau capaian kompetensi pembelajaran Kurikulum Merdeka dan cetak langsung Rapor resmi berformat PDF.
+              Tinjau capaian kompetensi pembelajaran Kurikulum Merdeka, perbarui capaian, dan cetak langsung Rapor resmi berformat PDF.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              onClick={handleExportCsv}
+              variant="outline"
+              size="sm"
+              className="rounded-xl text-xs font-semibold gap-1.5 border-slate-300 hover:bg-slate-100"
+            >
+              <Download className="h-3.5 w-3.5 text-blue-600" />
+              <span>Ekspor Rekap (CSV)</span>
+            </Button>
             <div className="px-3.5 py-2 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 text-xs font-bold flex items-center gap-2 shadow-xs">
               <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
               <span>Otorisasi Server Aktif</span>
             </div>
           </div>
         </div>
+
+        {/* Error Notification Banner if loading fails */}
+        {errorMessage && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold">
+              <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadData}
+              className="text-xs rounded-xl gap-1 border-rose-300 hover:bg-rose-100"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              <span>Coba Lagi</span>
+            </Button>
+          </div>
+        )}
 
         {/* 2. Kartu Statistik Cepat */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -175,7 +384,7 @@ export default function AdminNilaiPage() {
                 Total Siswa Terdata
               </div>
               <div className="text-2xl font-black text-slate-900 mt-0.5">
-                {students.length} Siswa
+                {safeStudents.length} Siswa
               </div>
             </div>
           </Card>
@@ -254,13 +463,28 @@ export default function AdminNilaiPage() {
                 {isLoading ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400">
-                      Memuat daftar nilai peserta didik...
+                      <div className="inline-flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                        <span>Memuat daftar nilai peserta didik...</span>
+                      </div>
                     </td>
                   </tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-slate-400">
                       Tidak ada data siswa yang cocok dengan kata kunci pencarian.
+                      {search && (
+                        <div className="mt-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSearch("")}
+                            className="text-xs rounded-xl"
+                          >
+                            Reset Pencarian
+                          </Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -320,14 +544,14 @@ export default function AdminNilaiPage() {
         </Card>
       </div>
 
-      {/* 5. MODAL INTERAKTIF: Detail Rapor Digital Siswa */}
+      {/* 5. MODAL INTERAKTIF: Detail & Edit Rapor Digital Siswa */}
       {selectedStudent && (
         <div className="print:hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             {/* Modal Header */}
-            <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/70">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0">
                   <GraduationCap className="h-6 w-6 text-amber-300" />
                 </div>
                 <div>
@@ -348,14 +572,61 @@ export default function AdminNilaiPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handlePrintPdf}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm gap-2 shadow-sm"
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Cetak Langsung PDF</span>
-                </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {isEditing ? (
+                  <>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveReport}
+                      disabled={isSaving}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs gap-1.5 shadow-sm"
+                    >
+                      {isSaving ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" />
+                      )}
+                      <span>Simpan Perubahan</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditForm(JSON.parse(JSON.stringify(selectedStudent)));
+                        setIsEditing(false);
+                      }}
+                      disabled={isSaving}
+                      className="rounded-xl text-xs gap-1.5"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                      <span>Batal</span>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditForm(JSON.parse(JSON.stringify(selectedStudent)));
+                        setIsEditing(true);
+                      }}
+                      className="rounded-xl text-xs gap-1.5 hover:border-blue-400 hover:bg-blue-50"
+                    >
+                      <Edit3 className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Edit Nilai & Catatan</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handlePrintPdf}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs gap-1.5 shadow-sm"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      <span>Cetak PDF</span>
+                    </Button>
+                  </>
+                )}
+
                 <button
                   onClick={() => setSelectedStudent(null)}
                   className="w-9 h-9 rounded-xl hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors"
@@ -365,6 +636,14 @@ export default function AdminNilaiPage() {
                 </button>
               </div>
             </div>
+
+            {/* Notification alert for success */}
+            {saveSuccessMsg && (
+              <div className="px-6 py-2.5 bg-emerald-50 border-b border-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>{saveSuccessMsg}</span>
+              </div>
+            )}
 
             {/* Modal Tabs Navigation */}
             <div className="flex items-center gap-2 px-6 border-b border-slate-100 bg-white text-xs font-bold">
@@ -377,7 +656,9 @@ export default function AdminNilaiPage() {
                 }`}
               >
                 <BookOpen className="h-4 w-4" />
-                <span>Capaian Mata Pelajaran ({selectedStudent.subjects.length})</span>
+                <span>
+                  Capaian Mata Pelajaran ({(editForm?.subjects || selectedStudent.subjects || []).length})
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab("ekskul")}
@@ -388,7 +669,9 @@ export default function AdminNilaiPage() {
                 }`}
               >
                 <Sparkles className="h-4 w-4" />
-                <span>Ekstrakurikuler ({selectedStudent.extracurriculars.length})</span>
+                <span>
+                  Ekstrakurikuler ({(selectedStudent.extracurriculars || []).length})
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab("kehadiran")}
@@ -412,7 +695,7 @@ export default function AdminNilaiPage() {
                     Nilai Rata-Rata Rapor (GPA)
                   </div>
                   <div className="text-3xl font-black text-blue-900 mt-1">
-                    {selectedStudent.gpa}
+                    {isEditing ? editForm?.gpa : selectedStudent.gpa}
                   </div>
                   <div className="text-[11px] text-blue-600 mt-0.5">Skala Standar Nasional (0 - 100)</div>
                 </div>
@@ -443,6 +726,15 @@ export default function AdminNilaiPage() {
               {/* Tab 1: Mata Pelajaran */}
               {activeTab === "nilai" && (
                 <div className="space-y-4">
+                  {isEditing && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
+                      <Edit3 className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>
+                        <strong>Mode Pengeditan Aktif:</strong> Anda dapat mengubah angka nilai akhir (0-100) dan narasi deskripsi capaian kompetensi. Predikat dan GPA dihitung secara otomatis.
+                      </span>
+                    </div>
+                  )}
+
                   <div className="overflow-x-auto rounded-2xl border border-slate-200">
                     <table className="w-full text-left text-xs sm:text-sm">
                       <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase">
@@ -450,45 +742,67 @@ export default function AdminNilaiPage() {
                           <th className="py-3 px-4 w-12 text-center">No</th>
                           <th className="py-3 px-4">Muatan Mata Pelajaran</th>
                           <th className="py-3 px-4 text-center">KKM</th>
-                          <th className="py-3 px-4 text-center">Nilai Akhir</th>
-                          <th className="py-3 px-4 text-center">Predikat</th>
+                          <th className="py-3 px-4 text-center w-28">Nilai Akhir</th>
+                          <th className="py-3 px-4 text-center w-20">Predikat</th>
                           <th className="py-3 px-4">Deskripsi Capaian Kompetensi Belajar</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {selectedStudent.subjects.map((sub, idx) => (
-                          <tr key={sub.code} className="hover:bg-slate-50/70">
-                            <td className="py-3 px-4 text-center font-mono text-slate-400">
-                              {idx + 1}
-                            </td>
-                            <td className="py-3 px-4 font-bold text-slate-900">
-                              {sub.name}
-                              <span className="block text-[11px] font-mono text-slate-400 font-normal">
-                                Kode: {sub.code}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-center text-slate-500 font-medium">
-                              {sub.kkm}
-                            </td>
-                            <td className="py-3 px-4 text-center font-black text-blue-700 text-base">
-                              {sub.score}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <span
-                                className={`inline-block px-2.5 py-0.5 font-bold rounded-lg text-xs ${
-                                  sub.predicate === "A"
-                                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                    : "bg-blue-100 text-blue-800 border border-blue-200"
-                                }`}
-                              >
-                                {sub.predicate}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-xs text-slate-600 leading-relaxed max-w-md">
-                              {sub.competencyDesc}
-                            </td>
-                          </tr>
-                        ))}
+                        {((isEditing ? editForm?.subjects : selectedStudent.subjects) || []).map(
+                          (sub, idx) => (
+                            <tr key={sub.code} className="hover:bg-slate-50/70">
+                              <td className="py-3 px-4 text-center font-mono text-slate-400">
+                                {idx + 1}
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-900">
+                                {sub.name}
+                                <span className="block text-[11px] font-mono text-slate-400 font-normal">
+                                  Kode: {sub.code}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-center text-slate-500 font-medium">
+                                {sub.kkm}
+                              </td>
+                              <td className="py-3 px-4 text-center font-black text-blue-700 text-base">
+                                {isEditing ? (
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={sub.score}
+                                    onChange={(e) => handleScoreChange(idx, parseInt(e.target.value))}
+                                    className="w-20 text-center font-black text-sm h-9 rounded-lg mx-auto"
+                                  />
+                                ) : (
+                                  sub.score
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <span
+                                  className={`inline-block px-2.5 py-0.5 font-bold rounded-lg text-xs ${
+                                    sub.predicate === "A"
+                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                      : "bg-blue-100 text-blue-800 border border-blue-200"
+                                  }`}
+                                >
+                                  {sub.predicate}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-xs text-slate-600 leading-relaxed max-w-md">
+                                {isEditing ? (
+                                  <textarea
+                                    value={sub.competencyDesc}
+                                    onChange={(e) => handleCompetencyDescChange(idx, e.target.value)}
+                                    rows={2}
+                                    className="w-full text-xs p-2 rounded-lg border border-slate-200 focus:outline-blue-600 resize-y"
+                                  />
+                                ) : (
+                                  sub.competencyDesc
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -502,7 +816,7 @@ export default function AdminNilaiPage() {
                     Kegiatan Ekstrakurikuler yang Diikuti
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedStudent.extracurriculars.map((e) => (
+                    {(selectedStudent.extracurriculars || []).map((e) => (
                       <div
                         key={e.name}
                         className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-1.5"
@@ -530,33 +844,80 @@ export default function AdminNilaiPage() {
                     <div className="grid grid-cols-3 gap-4">
                       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                         <div className="text-xs text-slate-500 font-semibold">Sakit (S)</div>
-                        <div className="text-2xl font-black text-slate-900 mt-1">
-                          {selectedStudent.attendance.sakit}{" "}
-                          <span className="text-xs font-normal text-slate-400">hari</span>
-                        </div>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            value={editForm?.attendance?.sakit ?? 0}
+                            onChange={(e) => handleAttendanceChange("sakit", parseInt(e.target.value))}
+                            className="w-20 text-center font-black text-lg h-10 mx-auto mt-2 rounded-lg"
+                          />
+                        ) : (
+                          <div className="text-2xl font-black text-slate-900 mt-1">
+                            {selectedStudent.attendance?.sakit ?? 0}{" "}
+                            <span className="text-xs font-normal text-slate-400">hari</span>
+                          </div>
+                        )}
                       </div>
+
                       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                         <div className="text-xs text-slate-500 font-semibold">Izin (I)</div>
-                        <div className="text-2xl font-black text-slate-900 mt-1">
-                          {selectedStudent.attendance.izin}{" "}
-                          <span className="text-xs font-normal text-slate-400">hari</span>
-                        </div>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            value={editForm?.attendance?.izin ?? 0}
+                            onChange={(e) => handleAttendanceChange("izin", parseInt(e.target.value))}
+                            className="w-20 text-center font-black text-lg h-10 mx-auto mt-2 rounded-lg"
+                          />
+                        ) : (
+                          <div className="text-2xl font-black text-slate-900 mt-1">
+                            {selectedStudent.attendance?.izin ?? 0}{" "}
+                            <span className="text-xs font-normal text-slate-400">hari</span>
+                          </div>
+                        )}
                       </div>
+
                       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                         <div className="text-xs text-slate-500 font-semibold">Tanpa Keterangan (A)</div>
-                        <div className="text-2xl font-black text-slate-900 mt-1">
-                          {selectedStudent.attendance.tanpaKeterangan}{" "}
-                          <span className="text-xs font-normal text-slate-400">hari</span>
-                        </div>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            value={editForm?.attendance?.tanpaKeterangan ?? 0}
+                            onChange={(e) => handleAttendanceChange("tanpaKeterangan", parseInt(e.target.value))}
+                            className="w-20 text-center font-black text-lg h-10 mx-auto mt-2 rounded-lg"
+                          />
+                        ) : (
+                          <div className="text-2xl font-black text-slate-900 mt-1">
+                            {selectedStudent.attendance?.tanpaKeterangan ?? 0}{" "}
+                            <span className="text-xs font-normal text-slate-400">hari</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="p-5 rounded-2xl bg-blue-50/70 border border-blue-100 space-y-2">
                     <div className="font-bold text-blue-900 text-sm">Catatan dan Saran Wali Kelas:</div>
-                    <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic">
-                      &ldquo;{selectedStudent.teacherNotes}&rdquo;
-                    </p>
+                    {isEditing ? (
+                      <textarea
+                        value={editForm?.teacherNotes || ""}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm!,
+                            teacherNotes: e.target.value,
+                          })
+                        }
+                        rows={3}
+                        className="w-full text-xs sm:text-sm p-3 rounded-xl border border-blue-200 focus:outline-blue-600 bg-white"
+                        placeholder="Tuliskan catatan dan saran perkembangan pembelajaran siswa di sini..."
+                      />
+                    ) : (
+                      <p className="text-xs sm:text-sm text-slate-700 leading-relaxed italic">
+                        &ldquo;{selectedStudent.teacherNotes}&rdquo;
+                      </p>
+                    )}
                     <div className="pt-2 text-xs text-slate-500 font-mono">
                       Wali Kelas: <strong>{selectedStudent.homeroomTeacher}</strong> (NIP: {selectedStudent.homeroomTeacherNip})
                     </div>
@@ -568,7 +929,10 @@ export default function AdminNilaiPage() {
             {/* Modal Footer */}
             <div className="p-4 sm:p-5 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
               <span className="text-xs text-slate-400 font-mono">
-                Terakhir disinkronisasi: {new Date(selectedStudent.updatedAt).toLocaleDateString("id-ID")}
+                Terakhir disinkronisasi:{" "}
+                {selectedStudent.updatedAt
+                  ? new Date(selectedStudent.updatedAt).toLocaleDateString("id-ID")
+                  : "-"}
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -578,13 +942,24 @@ export default function AdminNilaiPage() {
                 >
                   Tutup
                 </Button>
-                <Button
-                  onClick={handlePrintPdf}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs gap-1.5 shadow-sm"
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Cetak PDF Rapor</span>
-                </Button>
+                {isEditing ? (
+                  <Button
+                    onClick={handleSaveReport}
+                    disabled={isSaving}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs gap-1.5 shadow-sm"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>Simpan Perubahan</span>
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handlePrintPdf}
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs gap-1.5 shadow-sm"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Cetak PDF Rapor</span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -671,7 +1046,7 @@ export default function AdminNilaiPage() {
                 </tr>
               </thead>
               <tbody>
-                {selectedStudent.subjects.map((sub, index) => (
+                {(selectedStudent.subjects || []).map((sub, index) => (
                   <tr key={sub.code} className="border-b border-slate-700">
                     <td className="border border-slate-800 p-1.5 text-center font-mono">{index + 1}</td>
                     <td className="border border-slate-800 p-1.5 font-bold">{sub.name}</td>
@@ -712,7 +1087,7 @@ export default function AdminNilaiPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedStudent.extracurriculars.map((e, idx) => (
+                  {(selectedStudent.extracurriculars || []).map((e, idx) => (
                     <tr key={e.name} className="border-b border-slate-700">
                       <td className="border border-slate-800 p-1 text-center">{idx + 1}</td>
                       <td className="border border-slate-800 p-1 font-bold">{e.name}</td>
@@ -737,15 +1112,21 @@ export default function AdminNilaiPage() {
                 <tbody>
                   <tr>
                     <td className="border border-slate-800 p-1">Sakit (S)</td>
-                    <td className="border border-slate-800 p-1 text-center font-bold">{selectedStudent.attendance.sakit} hari</td>
+                    <td className="border border-slate-800 p-1 text-center font-bold">
+                      {selectedStudent.attendance?.sakit ?? 0} hari
+                    </td>
                   </tr>
                   <tr>
                     <td className="border border-slate-800 p-1">Izin (I)</td>
-                    <td className="border border-slate-800 p-1 text-center font-bold">{selectedStudent.attendance.izin} hari</td>
+                    <td className="border border-slate-800 p-1 text-center font-bold">
+                      {selectedStudent.attendance?.izin ?? 0} hari
+                    </td>
                   </tr>
                   <tr>
                     <td className="border border-slate-800 p-1">Tanpa Keterangan (A)</td>
-                    <td className="border border-slate-800 p-1 text-center font-bold">{selectedStudent.attendance.tanpaKeterangan} hari</td>
+                    <td className="border border-slate-800 p-1 text-center font-bold">
+                      {selectedStudent.attendance?.tanpaKeterangan ?? 0} hari
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -766,7 +1147,8 @@ export default function AdminNilaiPage() {
             <div className="grid grid-cols-3 gap-2 text-center">
               {/* Kolom 1: Orang Tua / Wali */}
               <div className="flex flex-col justify-between h-28">
-                <div>Mengetahui,
+                <div>
+                  Mengetahui,
                   <br />
                   Orang Tua / Wali Murid
                 </div>
@@ -777,7 +1159,8 @@ export default function AdminNilaiPage() {
 
               {/* Kolom 2: Wali Kelas */}
               <div className="flex flex-col justify-between h-28">
-                <div>Wali Kelas,
+                <div>
+                  Wali Kelas,
                   <br />
                   Fase A - Kelas 1 Merdeka
                 </div>
@@ -789,7 +1172,8 @@ export default function AdminNilaiPage() {
 
               {/* Kolom 3: Kepala Sekolah */}
               <div className="flex flex-col justify-between h-28">
-                <div>Mengetahui,
+                <div>
+                  Mengetahui,
                   <br />
                   Kepala Sekolah SD Negeri Harapan Bangsa
                 </div>
