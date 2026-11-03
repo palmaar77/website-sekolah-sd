@@ -3,8 +3,9 @@ import { requireAuth } from "@/lib/auth/session";
 import prisma from "@/lib/prisma";
 import { schoolProfileSchema } from "@/lib/validations/profile";
 import { logActivity } from "@/lib/audit";
-import { sanitizeInput } from "@/lib/security/sanitize";
+import { sanitizeInput, sanitizeObject } from "@/lib/security/sanitize";
 import { apiSuccess, handleApiError } from "@/lib/api-response";
+import { parseGoogleMapsEmbedUrl } from "@/lib/maps";
 
 export async function GET() {
   try {
@@ -34,6 +35,11 @@ export async function PUT(request: NextRequest) {
 
     const data = parsed.data;
 
+    // Bersihkan URL embed peta jika ada
+    const cleanMapUrl = data.mapEmbedUrl
+      ? parseGoogleMapsEmbedUrl(data.mapEmbedUrl, data.address)
+      : null;
+
     // Sanitasi teks profil sekolah
     const cleanData = {
       ...data,
@@ -45,6 +51,7 @@ export async function PUT(request: NextRequest) {
       goals: sanitizeInput(data.goals),
       principalName: sanitizeInput(data.principalName),
       principalMessage: sanitizeInput(data.principalMessage),
+      mapEmbedUrl: cleanMapUrl,
     };
 
     // Cari profil yang sudah ada untuk memperbarui ID yang tepat
@@ -68,11 +75,90 @@ export async function PUT(request: NextRequest) {
       adminId: session.userId,
       adminName: session.name,
       action: "UPDATE_PROFILE",
-      details: "Memperbarui informasi profil, visi, misi, dan identitas sekolah",
+      details: "Memperbarui informasi profil, lokasi peta, dan identitas sekolah",
     });
 
     return apiSuccess(updated);
   } catch (error: unknown) {
     return handleApiError(error, "Gagal memperbarui profil sekolah");
+  }
+}
+
+/**
+ * PATCH /api/admin/profile
+ * Pembaruan cepat khusus Peta Lokasi / Kontak Sekolah (bisa dirubah kemana saja dan kapan saja)
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await requireAuth();
+    const body = await request.json();
+    const sanitized = sanitizeObject(body);
+
+    const existing =
+      (await prisma.schoolProfile.findUnique({
+        where: { id: "default-profile" },
+      })) || (await prisma.schoolProfile.findFirst());
+
+    const profileId = existing ? existing.id : "default-profile";
+
+    const updatePayload: Record<string, unknown> = {};
+
+    if (sanitized.mapEmbedUrl !== undefined) {
+      updatePayload.mapEmbedUrl = parseGoogleMapsEmbedUrl(
+        sanitized.mapEmbedUrl,
+        sanitized.address || existing?.address || "SD Negeri Harapan Bangsa"
+      );
+    }
+
+    if (sanitized.address !== undefined) {
+      updatePayload.address = sanitizeInput(sanitized.address);
+    }
+    if (sanitized.phone !== undefined) {
+      updatePayload.phone = sanitizeInput(sanitized.phone);
+    }
+    if (sanitized.email !== undefined) {
+      updatePayload.email = sanitizeInput(sanitized.email);
+    }
+    if (sanitized.whatsapp !== undefined) {
+      updatePayload.whatsapp = sanitizeInput(sanitized.whatsapp);
+    }
+
+    const updated = await prisma.schoolProfile.upsert({
+      where: { id: profileId },
+      update: updatePayload,
+      create: {
+        id: profileId,
+        schoolName: "SD Negeri Harapan Bangsa",
+        npsn: "20109999",
+        accreditation: "A",
+        address: sanitized.address || "Jl. Pendidikan Karakter No. 45",
+        city: "Kota Contoh",
+        province: "Provinsi Contoh",
+        phone: sanitized.phone || "(021) 555-0199",
+        email: sanitized.email || "info@sdharapanbangsa.sch.id",
+        principalName: "Kepala Sekolah",
+        principalMessage: "Selamat datang di sekolah kami.",
+        vision: "Cerdas Berkarakter",
+        mission: "Pembelajaran Berkualitas",
+        goals: "Prestasi Unggul",
+        history: "Didirikan demi kemajuan bangsa.",
+        heroHeadline: "Membentuk Generasi Cerdas dan Berkarakter",
+        heroSubheadline: "Sekolah dasar unggulan dengan kurikulum modern dan pembinaan akhlak mulia.",
+        ...updatePayload,
+      },
+    });
+
+    await logActivity({
+      adminId: session.userId,
+      adminName: session.name,
+      action: "UPDATE_PROFILE_MAP",
+      details: "Memperbarui peta lokasi Google Maps sekolah",
+    });
+
+    return apiSuccess(updated, {
+      message: "Peta lokasi berhasil diperbarui!",
+    });
+  } catch (error: unknown) {
+    return handleApiError(error, "Gagal memperbarui lokasi peta sekolah");
   }
 }

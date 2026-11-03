@@ -10,7 +10,10 @@ import {
   School,
   Sparkles,
   Share2,
+  MapPin,
+  ExternalLink,
 } from "lucide-react";
+import { parseGoogleMapsEmbedUrl } from "@/lib/maps";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -583,13 +586,74 @@ export default function AdminProfilePage() {
                   placeholder="https://youtube.com/@..."
                 />
               </div>
-              <Input
-                label="Embed URL Google Maps (src iframe)"
-                value={mapEmbedUrl}
-                onChange={(e) => setMapEmbedUrl(e.target.value)}
-                error={fieldErrors.mapEmbedUrl?.[0]}
-                placeholder="https://www.google.com/maps/embed?pb=..."
-              />
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Lokasi Google Maps / Embed Peta
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fullAddr = [schoolName, address, city, province]
+                        .filter(Boolean)
+                        .join(", ");
+                      if (fullAddr) {
+                        setMapEmbedUrl(fullAddr);
+                      }
+                    }}
+                    className="inline-flex items-center text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline gap-1"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>Gunakan Nama & Alamat Sekolah Otomatis</span>
+                  </button>
+                </div>
+                <Input
+                  value={mapEmbedUrl}
+                  onChange={(e) => setMapEmbedUrl(e.target.value)}
+                  error={fieldErrors.mapEmbedUrl?.[0]}
+                  placeholder="Bisa nama sekolah, alamat, koordinat (-6.2, 106.8), link Google Maps, atau kode <iframe...>"
+                />
+                <p className="text-xs text-slate-500">
+                  Mendukung semua format: nama sekolah/tempat, alamat lengkap, koordinat GPS (lat, lng), link share Google Maps, maupun kode embed HTML iframe.
+                </p>
+
+                {/* Live Preview Map */}
+                <div className="mt-3 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-2">
+                  <div className="flex items-center justify-between pb-2 px-1 text-xs text-slate-600 font-medium border-b border-slate-200 mb-2">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-emerald-600" />
+                      Pratinjau Peta Langsung (Live Preview)
+                    </span>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        mapEmbedUrl || [schoolName, address, city].filter(Boolean).join(", ") || "Indonesia"
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-700 hover:underline"
+                    >
+                      Buka di Tab Baru
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                  <div className="relative aspect-video sm:aspect-[21/9] w-full bg-slate-100 rounded-lg overflow-hidden">
+                    <iframe
+                      title="Pratinjau Lokasi Sekolah"
+                      src={parseGoogleMapsEmbedUrl(
+                        mapEmbedUrl,
+                        [schoolName, address, city, province].filter(Boolean).join(", ")
+                      )}
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="w-full h-full"
+                    />
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
