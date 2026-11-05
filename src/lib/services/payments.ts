@@ -72,11 +72,24 @@ export interface CreatePaymentInput {
   notes?: string | null;
 }
 
+export interface SchoolQRISSetting {
+  enabled: boolean;
+  merchantName: string;
+  nmid: string;
+  acquirer: string;
+  customImageUrl?: string | null;
+  rawQrisPayload?: string | null;
+  instructions?: string | null;
+  updatedAt: string;
+}
+
 const DATA_DIR = path.join(process.cwd(), "data");
 const PAYMENTS_FILE = path.join(DATA_DIR, "payments.json");
+const QRIS_FILE = path.join(DATA_DIR, "qris-setting.json");
 
 // In-memory cache
 let paymentsCache: PaymentTransaction[] | null = null;
+let qrisCache: SchoolQRISSetting | null = null;
 
 function getInitialSeedPayments(): PaymentTransaction[] {
   const currentYear = new Date().getFullYear();
@@ -368,7 +381,13 @@ export function createPayment(input: CreatePaymentInput): PaymentTransaction {
     const phoneDigits = input.parentPhone.replace(/\D/g, "").slice(-8);
     vaNumber = `${prefix}${phoneDigits || Math.floor(10000000 + Math.random() * 90000000)}`;
   } else if (input.paymentMethod === "QRIS") {
-    qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226670016ID.CO.QRIS.WWW01189360091800000123455204581253033605406${totalAmount}5802ID5918SDN_HARAPAN_BANGSA6007BANDUNG62170113${invoiceNumber.replace(/-/g, "")}6304`;
+    const qrisConfig = getSchoolQRISSetting();
+    if (qrisConfig.customImageUrl) {
+      qrCodeUrl = qrisConfig.customImageUrl;
+    } else {
+      const merchantClean = (qrisConfig.merchantName || "SDN_HARAPAN_BANGSA").replace(/\s+/g, "_").toUpperCase();
+      qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021226670016ID.CO.QRIS.WWW01189360091800000123455204581253033605406${totalAmount}5802ID5918${merchantClean}6007BANDUNG62170113${invoiceNumber.replace(/-/g, "")}6304`;
+    }
   }
 
   const newPayment: PaymentTransaction = {
@@ -515,4 +534,83 @@ export function getPaymentStatistics() {
     totalPendingCount,
     currentMonthSppRevenue,
   };
+}
+
+/**
+ * Mengambil konfigurasi QRIS Sekolah saat ini
+ */
+export function getSchoolQRISSetting(): SchoolQRISSetting {
+  if (qrisCache) return qrisCache;
+
+  try {
+    if (fs.existsSync(QRIS_FILE)) {
+      const content = fs.readFileSync(QRIS_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === "object") {
+        qrisCache = {
+          enabled: parsed.enabled !== false,
+          merchantName: parsed.merchantName || "SD NEGERI HARAPAN BANGSA",
+          nmid: parsed.nmid || "ID1026048192847",
+          acquirer: parsed.acquirer || "QRIS Standar Bank Indonesia",
+          customImageUrl: parsed.customImageUrl || null,
+          rawQrisPayload: parsed.rawQrisPayload || null,
+          instructions:
+            parsed.instructions ||
+            "Buka aplikasi mobile banking (BCA, Mandiri, BRI, BNI) atau e-wallet (GoPay, OVO, ShopeePay, DANA), lalu pindai kode QRIS di atas.",
+          updatedAt: parsed.updatedAt || new Date().toISOString(),
+        };
+        return qrisCache;
+      }
+    }
+  } catch (err) {
+    console.error("Gagal membaca qris-setting.json:", err);
+  }
+
+  const defaultSetting: SchoolQRISSetting = {
+    enabled: true,
+    merchantName: "SD NEGERI HARAPAN BANGSA",
+    nmid: "ID1026048192847",
+    acquirer: "QRIS Standar Bank Indonesia",
+    customImageUrl: null,
+    rawQrisPayload: null,
+    instructions:
+      "Buka aplikasi mobile banking (BCA, Mandiri, BRI, BNI) atau e-wallet (GoPay, OVO, ShopeePay, DANA), lalu pindai kode QRIS di atas.",
+    updatedAt: new Date().toISOString(),
+  };
+
+  qrisCache = defaultSetting;
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(QRIS_FILE, JSON.stringify(defaultSetting, null, 2), "utf-8");
+  } catch {}
+
+  return defaultSetting;
+}
+
+/**
+ * Memperbarui konfigurasi QRIS Sekolah oleh Admin
+ */
+export function updateSchoolQRISSetting(
+  input: Partial<SchoolQRISSetting>
+): SchoolQRISSetting {
+  const current = getSchoolQRISSetting();
+  const updated: SchoolQRISSetting = {
+    ...current,
+    ...input,
+    updatedAt: new Date().toISOString(),
+  };
+
+  qrisCache = updated;
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(QRIS_FILE, JSON.stringify(updated, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Gagal menyimpan qris-setting.json:", err);
+  }
+
+  return updated;
 }

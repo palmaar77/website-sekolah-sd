@@ -11,6 +11,8 @@ import {
   generateInvoiceNumber,
   generateReceiptNumber,
   simulatePaymentSuccess,
+  getSchoolQRISSetting,
+  updateSchoolQRISSetting,
 } from "../src/lib/services/payments.ts";
 
 describe("Format Rupiah & Fungsi Terbilang Bahasa Indonesia", () => {
@@ -226,5 +228,51 @@ describe("Integrasi Gateway Pembayaran & Simulator Sandbox (Midtrans & Xendit)",
 
     const verified = getPaymentByInvoice(tx.invoiceNumber);
     assert.equal(verified?.status, "SUCCESS");
+  });
+});
+
+describe("Pengaturan & Kustomisasi QRIS Sekolah", () => {
+  it("harus dapat membaca pengaturan default QRIS sekolah", () => {
+    const qris = getSchoolQRISSetting();
+    assert.ok(qris.merchantName);
+    assert.ok(qris.nmid);
+    assert.equal(typeof qris.enabled, "boolean");
+  });
+
+  it("harus dapat memperbarui nama merchant dan gambar QRIS kustom sekolah", () => {
+    const updated = updateSchoolQRISSetting({
+      merchantName: "SDN HARAPAN BANGSA REKENING UTAMA",
+      nmid: "ID1029998887771",
+      customImageUrl: "https://example.com/custom-qris-sekolah.png",
+      acquirer: "Bank BJB",
+    });
+
+    assert.equal(updated.merchantName, "SDN HARAPAN BANGSA REKENING UTAMA");
+    assert.equal(updated.nmid, "ID1029998887771");
+    assert.equal(updated.customImageUrl, "https://example.com/custom-qris-sekolah.png");
+    assert.equal(updated.acquirer, "Bank BJB");
+
+    // Ketika transaksi QRIS baru dibuat, harus otomatis menggunakan customImageUrl
+    const tx = createPayment({
+      studentRegistrationNumber: "PPDB-TEST-QRIS",
+      studentName: "Siswa Pembayar QRIS",
+      studentClass: "Kelas 4-B",
+      parentName: "Wali Siswa",
+      parentPhone: "081277778888",
+      paymentType: "SPP",
+      period: "Desember 2026",
+      amount: 350000,
+      paymentGateway: "MIDTRANS",
+      paymentMethod: "QRIS",
+    });
+
+    assert.equal(tx.qrCodeUrl, "https://example.com/custom-qris-sekolah.png");
+
+    // Reset kembali ke bawaan
+    const reset = updateSchoolQRISSetting({
+      merchantName: "SD NEGERI HARAPAN BANGSA",
+      customImageUrl: null,
+    });
+    assert.equal(reset.customImageUrl, null);
   });
 });

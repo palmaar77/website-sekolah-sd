@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "merchantName": "SD NEGERI HARAPAN BANGSA",
+  "nmid": "ID1026048192847",
+  "acquirer": "QRIS Standar Bank Indonesia",
+  "customImageUrl": null,
+  "rawQrisPayload": null,
+  "instructions": "Buka aplikasi mobile banking (BCA, Mandiri, BRI, BNI) atau e-wallet (GoPay, OVO, ShopeePay, DANA), lalu pindai kode QRIS di atas.",
+  "updatedAt": "2026-11-05T10:00:00.000Z"
+}
