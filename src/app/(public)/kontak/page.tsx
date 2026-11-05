@@ -13,11 +13,6 @@ import {
   ExternalLink,
   Navigation,
   Compass,
-  Settings,
-  X,
-  Save,
-  Crosshair,
-  Sparkles,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +44,6 @@ interface SchoolContactProfile {
 
 export default function KontakPage() {
   const [profile, setProfile] = React.useState<SchoolContactProfile | null>(null);
-  const [isAdmin, setIsAdmin] = React.useState(false);
 
   // Form State
   const [name, setName] = React.useState("");
@@ -62,32 +56,13 @@ export default function KontakPage() {
   const [isSuccess, setIsSuccess] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
 
-  // Modal Ubah Lokasi Peta State
-  const [isMapModalOpen, setIsMapModalOpen] = React.useState(false);
-  const [locationInput, setLocationInput] = React.useState("");
-  const [isSavingMap, setIsSavingMap] = React.useState(false);
-  const [mapSuccessMsg, setMapSuccessMsg] = React.useState<string | null>(null);
-  const [mapErrorMsg, setMapErrorMsg] = React.useState<string | null>(null);
-
-  // 1. Muat Profil Sekolah & Periksa Sesi Admin secara dinamis
+  // Muat Profil Sekolah & Peta Lokasi dari database
   React.useEffect(() => {
-    // Ambil data kontak & lokasi sekolah terbaru dari database
     fetch("/api/profile")
       .then((res) => res.json())
       .then((json) => {
         if (json.success && json.data) {
           setProfile(json.data);
-          setLocationInput(json.data.mapEmbedUrl || json.data.address || "");
-        }
-      })
-      .catch(() => {});
-
-    // Cek apakah pengunjung adalah Administrator yang sedang login
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && (json.user || json.data?.user)) {
-          setIsAdmin(true);
         }
       })
       .catch(() => {});
@@ -135,72 +110,6 @@ export default function KontakPage() {
     }
   };
 
-  // Simpan Pembaruan Lokasi Peta
-  const handleSaveMapLocation = async () => {
-    if (!locationInput.trim()) {
-      setMapErrorMsg("Silakan masukkan alamat, nama lokasi, atau embed link peta.");
-      return;
-    }
-
-    setIsSavingMap(true);
-    setMapErrorMsg(null);
-    setMapSuccessMsg(null);
-
-    try {
-      const cleanEmbedUrl = parseGoogleMapsEmbedUrl(
-        locationInput,
-        profile?.address || "SD Negeri Harapan Bangsa"
-      );
-
-      const res = await fetch("/api/admin/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mapEmbedUrl: cleanEmbedUrl,
-        }),
-      });
-
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setProfile((prev) =>
-          prev ? { ...prev, mapEmbedUrl: cleanEmbedUrl } : null
-        );
-        setMapSuccessMsg("Lokasi peta berhasil diubah dan diterapkan secara instan!");
-        setTimeout(() => {
-          setIsMapModalOpen(false);
-          setMapSuccessMsg(null);
-        }, 1500);
-      } else {
-        setMapErrorMsg(
-          json.message ||
-            "Gagal menyimpan lokasi. Pastikan Anda memiliki hak akses Administrator."
-        );
-      }
-    } catch {
-      setMapErrorMsg("Terjadi gangguan jaringan saat memperbarui lokasi peta.");
-    } finally {
-      setIsSavingMap(false);
-    }
-  };
-
-  // Ambil lokasi GPS perangkat saat ini
-  const handleUseCurrentGPSLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Browser Anda tidak mendukung deteksi lokasi otomatis (Geolocation).");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setLocationInput(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
-      },
-      () => {
-        alert("Gagal membaca lokasi perangkat. Pastikan izin lokasi telah diaktifkan.");
-      }
-    );
-  };
-
   // Format Tampilan Data Kontak
   const schoolName = cleanDemoMarkers(profile?.schoolName) || SCHOOL_CONFIG.name;
   const fullAddress = profile?.address
@@ -215,12 +124,6 @@ export default function KontakPage() {
   // URL Embed Google Maps yang aktif
   const currentEmbedUrl = parseGoogleMapsEmbedUrl(
     profile?.mapEmbedUrl,
-    fullAddress
-  );
-
-  // URL Embed untuk pratinjau langsung di dalam modal pengubahan lokasi
-  const previewModalEmbedUrl = parseGoogleMapsEmbedUrl(
-    locationInput,
     fullAddress
   );
 
@@ -440,24 +343,6 @@ export default function KontakPage() {
                 <Compass className="h-3.5 w-3.5 text-blue-600" />
                 <span>Buka di Google Maps</span>
               </a>
-
-              {/* Tombol Khusus Admin untuk Mengubah Lokasi Peta Kapan Saja */}
-              {isAdmin && (
-                <Button
-                  onClick={() => {
-                    setLocationInput(profile?.mapEmbedUrl || profile?.address || "");
-                    setMapErrorMsg(null);
-                    setMapSuccessMsg(null);
-                    setIsMapModalOpen(true);
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl text-xs font-bold gap-1.5 border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
-                >
-                  <Settings className="h-3.5 w-3.5 text-amber-600" />
-                  <span>Ubah Lokasi Peta (Admin)</span>
-                </Button>
-              )}
             </div>
           </div>
 
@@ -476,136 +361,6 @@ export default function KontakPage() {
           </div>
         </div>
       </div>
-
-      {/* MODAL DIALOG: Ubah Lokasi Peta Sekolah (Bisa dirubah kemana saja dan kapan saja) */}
-      {isMapModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
-                  <MapPin className="h-5 w-5 text-amber-300" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-base">
-                    Ubah Lokasi Peta Sekolah
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Ketik nama alamat, koordinat, atau tempel link Google Maps untuk memperbarui peta kapan saja.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsMapModalOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors"
-                aria-label="Tutup"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-4">
-              {mapSuccessMsg && (
-                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <span>{mapSuccessMsg}</span>
-                </div>
-              )}
-
-              {mapErrorMsg && (
-                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-800 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
-                  <span>{mapErrorMsg}</span>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">
-                  Masukkan Lokasi Baru (Alamat, Koordinat, Link Maps, atau Embed Iframe):
-                </label>
-                <Input
-                  value={locationInput}
-                  onChange={(e) => setLocationInput(e.target.value)}
-                  placeholder="Contoh: Jl. Asia Afrika No. 8, Bandung ATAU -6.2088, 106.8456 ATAU tempel link maps"
-                  className="text-xs sm:text-sm h-11 rounded-xl"
-                />
-              </div>
-
-              {/* Tombol Opsi Cepat */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLocationInput(profile?.address || "")}
-                  className="text-xs rounded-xl gap-1.5 hover:bg-blue-50 border-slate-300"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Pakai Alamat Profil Sekolah</span>
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleUseCurrentGPSLocation}
-                  className="text-xs rounded-xl gap-1.5 hover:bg-emerald-50 border-slate-300"
-                >
-                  <Crosshair className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Pakai Lokasi GPS Saya Saat Ini</span>
-                </Button>
-              </div>
-
-              {/* Live Preview Peta */}
-              <div className="space-y-1.5 pt-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  Pratinjau Peta Langsung:
-                </span>
-                <div className="rounded-2xl overflow-hidden border border-slate-200 aspect-16/9 bg-slate-100 shadow-inner">
-                  <iframe
-                    title="Pratinjau Peta"
-                    src={previewModalEmbedUrl}
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    loading="lazy"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 sm:p-5 border-t border-slate-100 flex items-center justify-between bg-slate-50">
-              <span className="text-[11px] text-slate-500">
-                Perubahan langsung berlaku di website publik secara instan.
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setIsMapModalOpen(false)}
-                  className="rounded-xl text-xs"
-                >
-                  Batal
-                </Button>
-                <Button
-                  onClick={handleSaveMapLocation}
-                  disabled={isSavingMap}
-                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs gap-1.5 font-bold shadow-sm"
-                >
-                  {isSavingMap ? (
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Save className="h-3.5 w-3.5" />
-                  )}
-                  <span>Simpan Lokasi Peta</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
