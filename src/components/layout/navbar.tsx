@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Clock,
   ShieldCheck,
+  CreditCard,
 } from "lucide-react";
 import { SCHOOL_CONFIG } from "@/config/school";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -120,7 +121,7 @@ export function Navbar() {
               <span className="font-extrabold text-lg sm:text-xl text-slate-900 dark:text-white tracking-tight leading-none group-hover:text-blue-600 dark:group-hover:text-amber-400 transition-colors">
                 {SCHOOL_CONFIG.shortName.toUpperCase()}
               </span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 tracking-wide">
+              <span className="hidden sm:block text-xs font-medium text-slate-500 dark:text-slate-400 mt-1 tracking-wide">
                 Cerdas • Berakhlak • Berkarakter Pancasila
               </span>
             </div>
@@ -247,24 +248,37 @@ export function Navbar() {
           </div>
 
           {/* Mobile Menu Action Area */}
-          <div className="flex lg:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-1.5 sm:gap-2">
             <ThemeToggle className="p-1.5" />
+
+            {/* Tombol Cepat Pembayaran SPP di Header HP */}
             <Link
-              href="/login"
-              className="text-xs font-bold bg-blue-50 dark:bg-slate-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-slate-700 px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+              href="/pembayaran"
+              className="text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs active:scale-95 transition-all"
+              title="Pembayaran SPP & Uang Gedung Online"
             >
-              <LogIn className="h-3.5 w-3.5" />
-              <span>Masuk</span>
+              <CreditCard className="h-3.5 w-3.5 text-emerald-100" />
+              <span>Bayar</span>
             </Link>
+
             <Link
               href="/ppdb"
-              className="text-xs font-bold bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg"
+              className="text-xs font-bold bg-amber-400 text-slate-950 px-2.5 sm:px-3 py-1.5 rounded-lg active:scale-95 transition-all"
             >
               PPDB
             </Link>
+
+            <Link
+              href="/login"
+              className="text-xs font-bold bg-blue-50 dark:bg-slate-800 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-slate-700 px-2 py-1.5 rounded-lg flex items-center gap-1"
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Masuk</span>
+            </Link>
+
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none cursor-pointer transition-colors"
+              className="p-1.5 sm:p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none cursor-pointer transition-colors"
               aria-label="Buka menu navigasi"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -282,6 +296,7 @@ export function Navbar() {
                 link.href === "/"
                   ? pathname === "/"
                   : pathname.startsWith(link.href);
+              const isPayment = link.href === "/pembayaran";
               return (
                 <Link
                   key={link.name}
@@ -290,11 +305,25 @@ export function Navbar() {
                     "px-4 py-3 rounded-xl text-sm font-medium flex items-center justify-between transition-colors",
                     isActive
                       ? "text-blue-700 dark:text-amber-400 bg-blue-50 dark:bg-blue-950/70 font-bold"
+                      : isPayment
+                      ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100/60 font-semibold"
                       : "text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                   )}
                 >
-                  <span>{link.name}</span>
-                  {isActive && <ChevronRight className="h-4 w-4 text-blue-600 dark:text-amber-400" />}
+                  <span className="flex items-center gap-2">
+                    {isPayment && (
+                      <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    )}
+                    <span>{link.name}</span>
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isPayment && (
+                      <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 rounded-full shadow-xs">
+                        Baru
+                      </span>
+                    )}
+                    {isActive && <ChevronRight className="h-4 w-4 text-blue-600 dark:text-amber-400" />}
+                  </div>
                 </Link>
               );
             })}
@@ -322,6 +351,23 @@ export function Navbar() {
                 <span>Portal Admin</span>
               </Link>
             </div>
+
+            {/* Banner Khusus Pembayaran Online di Drawer HP */}
+            <Link
+              href="/pembayaran"
+              className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md active:scale-95 transition-all"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <CreditCard className="h-4 w-4 text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="font-extrabold text-xs">Bayar SPP & Uang Gedung</div>
+                  <div className="text-[10px] text-emerald-100">QRIS, VA Bank & Unduh Kwitansi</div>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-emerald-200" />
+            </Link>
 
             <Link
               href="/login"
