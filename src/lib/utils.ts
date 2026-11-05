@@ -86,3 +86,66 @@ export function generateRegistrationNumber(prefix = "PPDB"): string {
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("id-ID").format(num);
 }
+
+/**
+ * Format angka rupiah dengan prefix Rp
+ * Contoh: Rp 350.000
+ */
+export function formatRupiah(amount: number): string {
+  return "Rp " + new Intl.NumberFormat("id-ID").format(amount);
+}
+
+/**
+ * Konversi angka nominal ke kalimat terbilang bahasa Indonesia resmi
+ * Contoh: 350000 -> "Tiga Ratus Lima Puluh Ribu Rupiah"
+ */
+export function terbilang(num: number): string {
+  if (num === 0) return "Nol Rupiah";
+
+  function terbilangCore(n: number): string {
+    const words = [
+      "",
+      "Satu",
+      "Dua",
+      "Tiga",
+      "Empat",
+      "Lima",
+      "Enam",
+      "Tujuh",
+      "Delapan",
+      "Sembilan",
+      "Sepuluh",
+      "Sebelas",
+    ];
+    const val = Math.floor(Math.abs(n));
+    if (val < 12) return words[val];
+    if (val < 20) return (words[val - 10] + " Belas").trim();
+    if (val < 100)
+      return (words[Math.floor(val / 10)] + " Puluh " + terbilangCore(val % 10)).trim();
+    if (val < 200) return ("Seratus " + terbilangCore(val - 100)).trim();
+    if (val < 1000)
+      return (words[Math.floor(val / 100)] + " Ratus " + terbilangCore(val % 100)).trim();
+    if (val < 2000) return ("Seribu " + terbilangCore(val - 1000)).trim();
+    if (val < 1000000)
+      return (
+        terbilangCore(Math.floor(val / 1000)) +
+        " Ribu " +
+        terbilangCore(val % 1000)
+      ).trim();
+    if (val < 1000000000)
+      return (
+        terbilangCore(Math.floor(val / 1000000)) +
+        " Juta " +
+        terbilangCore(val % 1000000)
+      ).trim();
+    if (val < 1000000000000)
+      return (
+        terbilangCore(Math.floor(val / 1000000000)) +
+        " Miliar " +
+        terbilangCore(val % 1000000000)
+      ).trim();
+    return String(val);
+  }
+
+  return (terbilangCore(num) + " Rupiah").replace(/\s+/g, " ");
+}

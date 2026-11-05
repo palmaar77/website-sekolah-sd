@@ -26,6 +26,7 @@ const NAV_LINKS = [
   { name: "Berita", href: "/berita" },
   { name: "Galeri", href: "/galeri" },
   { name: "PPDB", href: "/ppdb" },
+  { name: "Pembayaran", href: "/pembayaran" },
   { name: "Kontak", href: "/kontak" },
 ];
 

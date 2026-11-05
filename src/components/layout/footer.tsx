@@ -91,6 +91,16 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/pembayaran" className="hover:text-amber-400 transition-colors font-medium text-emerald-400">
+                  Pembayaran SPP & Uang Gedung
+                </Link>
+              </li>
+              <li>
+                <Link href="/pembayaran/riwayat" className="hover:text-amber-400 transition-colors text-slate-300">
+                  Cek Status Pembayaran & Kwitansi
+                </Link>
+              </li>
+              <li>
                 <Link href="/siswa/login" className="hover:text-amber-400 transition-colors font-semibold text-blue-300">
                   Portal Siswa (Login & Status)
                 </Link>

@@ -21,6 +21,7 @@ import {
   Smartphone,
   Image as ImageIcon,
   MessageCircle,
+  CreditCard,
 } from "lucide-react";
 import { formatDateIndo } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -233,6 +234,25 @@ export default async function HomePage() {
               </div>
               <span className="text-xs font-bold text-slate-900 leading-tight">Hubungi Kami</span>
               <span className="text-[10px] text-sky-700 font-semibold mt-0.5">Lokasi & WA</span>
+            </Link>
+          </div>
+
+          {/* Banner Pembayaran Online SPP & Uang Gedung Mobile */}
+          <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-700 text-white flex items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+                <CreditCard className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-bold leading-tight">Pembayaran Online SPP</p>
+                <p className="text-[10px] text-emerald-100 mt-0.5">QRIS, VA Bank & Unduh Kwitansi</p>
+              </div>
+            </div>
+            <Link
+              href="/pembayaran"
+              className="shrink-0 text-xs font-bold bg-white text-emerald-800 hover:bg-emerald-50 px-3.5 py-1.5 rounded-xl shadow-xs active:scale-95 transition-all"
+            >
+              Bayar Online
             </Link>
           </div>
 
