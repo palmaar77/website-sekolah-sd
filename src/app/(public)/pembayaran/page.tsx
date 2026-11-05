@@ -68,7 +68,7 @@ const PRESET_STUDENTS = [
   },
 ];
 
-export default function PembayaranPage() {
+function PembayaranContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -745,3 +745,19 @@ export default function PembayaranPage() {
     </div>
   );
 }
+
+export default function PembayaranPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="py-24 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
+          <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <span>Memuat sistem pembayaran online...</span>
+        </div>
+      }
+    >
+      <PembayaranContent />
+    </React.Suspense>
+  );
+}
+
