@@ -17,8 +17,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PaymentTransaction, generateStrukNumber } from "@/lib/services/payments";
-import { formatDateIndo, formatRupiah, terbilang } from "@/lib/utils";
+import type { PaymentTransaction } from "@/lib/services/payments";
+import { formatDateIndo, formatRupiah, terbilang, generateStrukNumber } from "@/lib/utils";
 import { SCHOOL_CONFIG, getWhatsAppUrl } from "@/config/school";
 
 interface StrukPembayaranProps {
@@ -369,3 +369,4 @@ Terima kasih telah membayar tepat waktu.
     </div>
   );
 }
+

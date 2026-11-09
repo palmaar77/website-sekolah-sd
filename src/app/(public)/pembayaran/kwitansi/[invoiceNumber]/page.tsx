@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PaymentTransaction } from "@/lib/services/payments";
+import type { PaymentTransaction } from "@/lib/services/payments";
 import { formatDateIndo, formatRupiah, terbilang } from "@/lib/utils";
 import { SCHOOL_CONFIG } from "@/config/school";
 

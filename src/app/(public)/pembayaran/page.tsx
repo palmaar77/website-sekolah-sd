@@ -27,7 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { PaymentTransaction, PaymentMethod, PaymentType } from "@/lib/services/payments";
+import type { PaymentTransaction, PaymentMethod, PaymentType } from "@/lib/services/payments";
 import { formatRupiah, formatDateIndo } from "@/lib/utils";
 import { SCHOOL_CONFIG } from "@/config/school";
 import { StrukPembayaran } from "@/components/payment/StrukPembayaran";

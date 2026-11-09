@@ -13,7 +13,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PaymentTransaction } from "@/lib/services/payments";
+import type { PaymentTransaction } from "@/lib/services/payments";
 import { StrukPembayaran } from "@/components/payment/StrukPembayaran";
 
 function StrukPageContent() {
@@ -153,3 +153,4 @@ export default function StrukPage() {
     </React.Suspense>
   );
 }
+
