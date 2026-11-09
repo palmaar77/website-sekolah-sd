@@ -21,6 +21,8 @@ import {
   FileText,
   AlertCircle,
   History,
+  Receipt,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,7 @@ import { Card } from "@/components/ui/card";
 import { PaymentTransaction, PaymentMethod, PaymentType } from "@/lib/services/payments";
 import { formatRupiah, formatDateIndo } from "@/lib/utils";
 import { SCHOOL_CONFIG } from "@/config/school";
+import { StrukPembayaran } from "@/components/payment/StrukPembayaran";
 
 const MONTH_OPTIONS = [
   "Juli 2026",
@@ -97,6 +100,45 @@ function PembayaranContent() {
   const [simulationSuccess, setSimulationSuccess] = React.useState(false);
   const [copiedVA, setCopiedVA] = React.useState(false);
 
+  // State Cetak Struk Pembayaran Cepat
+  const [selectedStrukTransaction, setSelectedStrukTransaction] = React.useState<PaymentTransaction | null>(null);
+  const [strukSearchQuery, setStrukSearchQuery] = React.useState("");
+  const [isSearchingStruk, setIsSearchingStruk] = React.useState(false);
+  const [searchStrukError, setSearchStrukError] = React.useState<string | null>(null);
+
+  const fetchAndOpenStruk = React.useCallback(async (query: string) => {
+    const q = query.trim();
+    if (!q) {
+      setSearchStrukError("Silakan masukkan Nomor Invoice atau NISN/No. Registrasi siswa.");
+      return;
+    }
+    setSearchStrukError(null);
+    setIsSearchingStruk(true);
+
+    try {
+      // 1. Coba pencarian langsung berdasarkan invoice number
+      const directRes = await fetch(`/api/payment/${encodeURIComponent(q)}`);
+      const directJson = await directRes.json();
+      if (directRes.ok && directJson.success && directJson.data?.transaction) {
+        setSelectedStrukTransaction(directJson.data.transaction);
+        return;
+      }
+
+      // 2. Fallback cari di daftar transaksi (misal input berupa NISN atau nama)
+      const listRes = await fetch(`/api/payment?query=${encodeURIComponent(q)}`);
+      const listJson = await listRes.json();
+      if (listRes.ok && listJson.success && Array.isArray(listJson.data) && listJson.data.length > 0) {
+        setSelectedStrukTransaction(listJson.data[0]);
+      } else {
+        setSearchStrukError(`Transaksi dengan nomor/kata kunci "${q}" tidak ditemukan.`);
+      }
+    } catch {
+      setSearchStrukError("Terjadi gangguan jaringan saat memuat struk transaksi.");
+    } finally {
+      setIsSearchingStruk(false);
+    }
+  }, []);
+
   // Periksa apakah ada invoice query param (misal dari riwayat)
   React.useEffect(() => {
     const inv = searchParams.get("invoice");
@@ -110,7 +152,12 @@ function PembayaranContent() {
         })
         .catch(() => {});
     }
-  }, [searchParams]);
+
+    const strukParam = searchParams.get("struk");
+    if (strukParam) {
+      fetchAndOpenStruk(strukParam);
+    }
+  }, [searchParams, fetchAndOpenStruk]);
 
   const handleStudentSelect = (val: string) => {
     setSelectedStudentType(val);
@@ -245,7 +292,20 @@ function PembayaranContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 shrink-0 flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("cari-cetak-struk-section");
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth" });
+                }
+              }}
+              className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-5 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition-all active:scale-95"
+            >
+              <Receipt className="h-4 w-4 text-slate-950" />
+              <span>Cetak Struk Pembayaran</span>
+            </button>
             <Link
               href="/pembayaran/riwayat"
               className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white font-bold px-5 py-3 rounded-2xl text-xs sm:text-sm border border-white/20 transition-all backdrop-blur-xs"
@@ -257,7 +317,81 @@ function PembayaranContent() {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+        {/* FITUR CARI & CETAK STRUK PEMBAYARAN CEPAT */}
+        <div
+          id="cari-cetak-struk-section"
+          className="p-5 sm:p-7 rounded-3xl border border-blue-200/90 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-white shadow-md space-y-4"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <Receipt className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-black text-base sm:text-lg text-slate-900 tracking-tight">
+                  Cari & Cetak Struk Pembayaran
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600">
+                  Sudah pernah membayar? Masukkan No. Invoice atau NISN untuk langsung mencetak struk kasir / thermal receipt resmi.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              fetchAndOpenStruk(strukSearchQuery);
+            }}
+            className="flex flex-col sm:flex-row gap-2.5 pt-1"
+          >
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={strukSearchQuery}
+                onChange={(e) => setStrukSearchQuery(e.target.value)}
+                placeholder="Ketik No. Invoice (misal: INV-2026-SPP-00181) atau NISN Siswa..."
+                className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-mono placeholder:font-sans focus:outline-hidden focus:ring-2 focus:ring-blue-500 shadow-2xs"
+              />
+            </div>
+            <Button
+              type="submit"
+              isLoading={isSearchingStruk}
+              className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold gap-2 shrink-0 shadow-sm"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Cari & Cetak Struk</span>
+            </Button>
+          </form>
+
+          {searchStrukError && (
+            <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 p-3 rounded-xl flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+              <span>{searchStrukError}</span>
+            </div>
+          )}
+
+          {/* Contoh Preset Cepat */}
+          <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 pt-1 border-t border-blue-100/70">
+            <span className="font-bold text-slate-700">Contoh Cepat (Klik untuk Coba):</span>
+            <button
+              type="button"
+              onClick={() => fetchAndOpenStruk("INV-2026-SPP-00181")}
+              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-700 font-mono text-[11px] font-semibold transition-all shadow-2xs"
+            >
+              INV-2026-SPP-00181 (SPP Lunas)
+            </button>
+            <button
+              type="button"
+              onClick={() => fetchAndOpenStruk("INV-2026-BLD-00042")}
+              className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:text-blue-700 font-mono text-[11px] font-semibold transition-all shadow-2xs"
+            >
+              INV-2026-BLD-00042 (Uang Gedung)
+            </button>
+          </div>
+        </div>
         {/* Konten 2 Kolom: Formulir Bayar (Kiri) & Ringkasan/Info Biaya (Kanan) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Kolom Kiri: Formulir Pembayaran */}
@@ -628,17 +762,25 @@ function PembayaranContent() {
                     </p>
                   </div>
 
-                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                    <Button
+                      type="button"
+                      onClick={() => setSelectedStrukTransaction(createdTransaction)}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md transition-all active:scale-95"
+                    >
+                      <Receipt className="h-4 w-4" />
+                      <span>Cetak Struk</span>
+                    </Button>
                     <Link
                       href={`/pembayaran/kwitansi/${createdTransaction.invoiceNumber}`}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-all active:scale-95"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md transition-all active:scale-95"
                     >
                       <Printer className="h-4 w-4" />
-                      <span>Cetak & Unduh Kwitansi PDF</span>
+                      <span>Kwitansi PDF</span>
                     </Link>
                     <Link
                       href="/pembayaran/riwayat"
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-3 rounded-xl transition-all"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-3 rounded-xl transition-all"
                     >
                       <span>Lihat Riwayat</span>
                     </Link>
@@ -738,6 +880,47 @@ function PembayaranContent() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CETAK STRUK PEMBAYARAN KASIR */}
+      {selectedStrukTransaction && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-slate-100 rounded-3xl max-w-md w-full shadow-2xl border border-slate-300 overflow-hidden flex flex-col my-auto">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white print:hidden">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                  <Receipt className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm">
+                    Struk Transaksi Pembayaran
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    {selectedStrukTransaction.invoiceNumber}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedStrukTransaction(null)}
+                className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors"
+                aria-label="Tutup"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto max-h-[82vh]">
+              <StrukPembayaran
+                transaction={selectedStrukTransaction}
+                onClose={() => setSelectedStrukTransaction(null)}
+                isModal={true}
+              />
             </div>
           </div>
         </div>

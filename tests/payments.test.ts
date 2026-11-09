@@ -10,6 +10,7 @@ import {
   getPaymentStatistics,
   generateInvoiceNumber,
   generateReceiptNumber,
+  generateStrukNumber,
   simulatePaymentSuccess,
   getSchoolQRISSetting,
   updateSchoolQRISSetting,
@@ -276,3 +277,31 @@ describe("Pengaturan & Kustomisasi QRIS Sekolah", () => {
     assert.equal(reset.customImageUrl, null);
   });
 });
+
+describe("Fitur Struk Pembayaran & Generator Nomor Struk", () => {
+  it("harus menghasilkan nomor struk yang terstandar dengan awalan STR-", () => {
+    const strukFromInv = generateStrukNumber("INV-2026-SPP-00181");
+    assert.equal(strukFromInv, "STR-2026-SPP-00181");
+
+    const strukFromKw = generateStrukNumber(undefined, "KW-2026-99120");
+    assert.equal(strukFromKw, "STR-2026-99120");
+
+    const strukAuto = generateStrukNumber();
+    assert.ok(strukAuto.startsWith("STR-"));
+    const currentYear = new Date().getFullYear().toString();
+    assert.ok(strukAuto.includes(currentYear));
+  });
+
+  it("harus menyajikan data pembayaran yang lengkap untuk dicetak dalam struk", () => {
+    const tx = getPaymentByInvoice("INV-2026-SPP-00181");
+    assert.ok(tx);
+    if (tx) {
+      assert.ok(tx.studentName);
+      assert.ok(tx.studentRegistrationNumber);
+      assert.ok(tx.totalAmount > 0);
+      assert.ok(tx.paymentMethod);
+      assert.equal(tx.status, "SUCCESS");
+    }
+  });
+});
+

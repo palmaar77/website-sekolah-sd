@@ -11,6 +11,7 @@ import {
   AlertCircle,
   FileText,
   Printer,
+  Receipt,
   ChevronRight,
   ArrowRight,
   Sparkles,
@@ -278,15 +279,25 @@ export default function RiwayatPembayaranPage() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {isSuccess && (
-                          <Link
-                            href={`/pembayaran/kwitansi/${p.invoiceNumber}`}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 transition-colors"
-                          >
-                            <Printer className="h-3.5 w-3.5" />
-                            <span>Kwitansi PDF</span>
-                          </Link>
+                          <>
+                            <Link
+                              href={`/pembayaran/struk/${p.invoiceNumber}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs font-bold border border-blue-200 transition-colors"
+                            >
+                              <Receipt className="h-3.5 w-3.5" />
+                              <span>Cetak Struk</span>
+                            </Link>
+
+                            <Link
+                              href={`/pembayaran/kwitansi/${p.invoiceNumber}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 transition-colors"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                              <span>Kwitansi PDF</span>
+                            </Link>
+                          </>
                         )}
 
                         {isPending && (
@@ -351,13 +362,20 @@ export default function RiwayatPembayaranPage() {
                   <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
                     Dana pembayaran sebesar <strong>{formatRupiah(activePayment.totalAmount)}</strong> telah terkonfirmasi lunas dan dicatat di database sekolah.
                   </p>
-                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                    <Link
+                      href={`/pembayaran/struk/${activePayment.invoiceNumber}`}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md transition-all active:scale-95"
+                    >
+                      <Receipt className="h-4 w-4" />
+                      <span>Cetak Struk</span>
+                    </Link>
                     <Link
                       href={`/pembayaran/kwitansi/${activePayment.invoiceNumber}`}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-all"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-md transition-all"
                     >
                       <Printer className="h-4 w-4" />
-                      <span>Buka & Unduh Kwitansi PDF</span>
+                      <span>Kwitansi PDF</span>
                     </Link>
                   </div>
                 </div>

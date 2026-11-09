@@ -134,4 +134,38 @@ body {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
+
+  /* Format Khusus Cetak Struk Kasir / Thermal POS Receipt */
+  body.printing-struk {
+    background: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.printing-struk * {
+    visibility: hidden;
+  }
+
+  body.printing-struk #printable-struk-receipt,
+  body.printing-struk #printable-struk-receipt * {
+    visibility: visible;
+  }
+
+  body.printing-struk #printable-struk-receipt {
+    position: absolute;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: 0 !important;
+    width: 340px !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 12px !important;
+    box-shadow: none !important;
+    border: 1px dashed #94a3b8 !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-struk .struk-action-buttons {
+    display: none !important;
+  }
 }

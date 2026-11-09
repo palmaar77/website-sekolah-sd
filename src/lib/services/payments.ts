@@ -291,6 +291,22 @@ export function generateReceiptNumber(): string {
 }
 
 /**
+ * Buat nomor struk pembayaran transaksi / kasir digital
+ * Contoh: STR-2026-SPP-8X92K atau STR-2026-00382
+ */
+export function generateStrukNumber(invoiceNumber?: string, receiptNumber?: string): string {
+  if (receiptNumber) {
+    return receiptNumber.replace(/^KW-/i, "STR-");
+  }
+  if (invoiceNumber) {
+    return invoiceNumber.replace(/^INV-/i, "STR-");
+  }
+  const currentYear = new Date().getFullYear();
+  const randomDigits = Math.floor(10000 + Math.random() * 90000);
+  return `STR-${currentYear}-${randomDigits}`;
+}
+
+/**
  * Mengambil daftar pembayaran dengan filter
  */
 export function getPayments(filter?: {

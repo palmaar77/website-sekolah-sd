@@ -26,6 +26,7 @@ import {
   Trash2,
   HelpCircle,
   Sparkles,
+  Receipt,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -677,15 +678,26 @@ export default function AdminPembayaranPage() {
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {isSuccess ? (
-                            <Link
-                              href={`/pembayaran/kwitansi/${p.invoiceNumber}`}
-                              target="_blank"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition-colors"
-                              title="Cetak Kwitansi PDF"
-                            >
-                              <Printer className="h-3.5 w-3.5" />
-                              <span>Kwitansi</span>
-                            </Link>
+                            <>
+                              <Link
+                                href={`/pembayaran/struk/${p.invoiceNumber}`}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-bold transition-colors"
+                                title="Cetak Struk Kasir"
+                              >
+                                <Receipt className="h-3.5 w-3.5" />
+                                <span>Struk</span>
+                              </Link>
+                              <Link
+                                href={`/pembayaran/kwitansi/${p.invoiceNumber}`}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition-colors"
+                                title="Cetak Kwitansi PDF"
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                                <span>Kwitansi</span>
+                              </Link>
+                            </>
                           ) : isPending ? (
                             <Button
                               onClick={() => handleConfirmSuccess(p.id)}

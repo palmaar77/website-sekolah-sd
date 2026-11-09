@@ -15,7 +15,7 @@ export function FloatingWhatsApp() {
   return (
     <aside
       aria-label="Kontak Cepat WhatsApp"
-      className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end pointer-events-auto"
+      className="fixed bottom-20 lg:bottom-6 right-4 sm:right-6 z-40 flex flex-col items-end pointer-events-auto print:hidden"
     >
       {/* Tooltip Mini Ramah Pengunjung */}
       {showTooltip && (

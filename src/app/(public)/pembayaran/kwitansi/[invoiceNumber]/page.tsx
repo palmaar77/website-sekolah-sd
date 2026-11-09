@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Building,
   GraduationCap,
+  Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -150,6 +151,14 @@ export default function KwitansiPage() {
               <Printer className="h-3.5 w-3.5" />
               <span>Cetak / Unduh PDF</span>
             </Button>
+
+            <Link
+              href={`/pembayaran/struk/${payment.invoiceNumber}`}
+              className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-2 rounded-xl transition-all border border-slate-200"
+            >
+              <Receipt className="h-3.5 w-3.5 text-blue-600" />
+              <span>Format Struk Kasir</span>
+            </Link>
           </div>
         </div>
 
