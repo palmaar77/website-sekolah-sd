@@ -2,30 +2,48 @@
 const { createServer } = require("http");
 const { parse } = require("url");
 const next = require("next");
+const path = require("path");
 
-const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
-const port = process.env.PORT || 3000;
+// KUNCI PENTING CPANEL: Paksa direktori kerja selalu di folder aplikasi ini
+process.chdir(__dirname);
 
-const app = next({ dev, hostname, port });
+const dev = false;
+const hostname = "0.0.0.0";
+const port = parseInt(process.env.PORT, 10) || 3000;
+
+const app = next({
+  dev: false,
+  dir: __dirname,
+  hostname,
+  port,
+});
 const handle = app.getRequestHandler();
 
-app.prepare().then(() => {
-  createServer(async (req, res) => {
-    try {
-      const parsedUrl = parse(req.url, true);
-      await handle(req, res, parsedUrl);
-    } catch (err) {
-      console.error("Error handling request:", req.url, err);
-      res.statusCode = 500;
-      res.end("Internal Server Error");
-    }
-  })
-    .once("error", (err) => {
-      console.error("Server error:", err);
-      process.exit(1);
-    })
-    .listen(port, () => {
-      console.log(`> Server Next.js aktif di port ${port}`);
+app
+  .prepare()
+  .then(() => {
+    const server = createServer(async (req, res) => {
+      try {
+        const parsedUrl = parse(req.url, true);
+        await handle(req, res, parsedUrl);
+      } catch (err) {
+        console.error("Error handling request:", req.url, err);
+        res.statusCode = 500;
+        res.end("Internal Server Error");
+      }
     });
-});
+
+    server
+      .once("error", (err) => {
+        console.error("Server error:", err);
+        process.exit(1);
+      })
+      .listen(port, () => {
+        console.log(`> Server Next.js aktif di port ${port}`);
+      });
+  })
+  .catch((err) => {
+    console.error("Gagal memulai Next.js server:", err);
+    process.exit(1);
+  });
+
