@@ -1,18 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   // Sembunyikan header X-Powered-By untuk mitigasi OWASP A05 (Security Misconfiguration)
   poweredByHeader: false,
   experimental: {
     agentUpgrade: "security",
-  },
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
   },
   // Konfigurasi Security Headers bawaan Next.js
   async headers() {
