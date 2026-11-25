@@ -25,6 +25,11 @@ app
     const server = createServer(async (req, res) => {
       try {
         const parsedUrl = parse(req.url, true);
+        if (parsedUrl.pathname === "/api/health-check") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ status: "ok", timestamp: new Date().toISOString(), dir: __dirname }));
+          return;
+        }
         await handle(req, res, parsedUrl);
       } catch (err) {
         console.error("Error handling request:", req.url, err);
